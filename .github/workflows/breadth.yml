@@ -59,8 +59,18 @@ jobs:
           python tools/breadth_run.py $ARGS
 
       - name: 提交数据
+        # 手动跑 limit 小样本（连通性自测）时绝不提交，否则会用 50 只的假数据覆盖全量结果
+        if: success() && inputs.limit == ''
         run: |
           set -euo pipefail
+          python - <<'PY'
+          import json
+          d = json.load(open('breadth/data/breadth.json', encoding='utf-8'))
+          u = d['meta']['universe']; n = len(d['dates'])
+          print('股票池 %d 只 / 交易日 %d 个' % (u, n))
+          if u < 5000 or n < 700:
+              raise SystemExit('数据异常（股票池或交易日过少），拒绝提交')
+          PY
           git config user.name  "breadth-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet -- breadth/data/breadth.json; then

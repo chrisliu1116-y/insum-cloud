@@ -1,0 +1,78 @@
+name: 市场宽度收盘跑批
+
+# 为什么放在 GitHub Actions：
+#   本地跑批需要一台常开的机器（WorkBuddy 客户端关了就停）。
+#   Actions 是免费的定时容器，工作日自动跑完把 JSON 提交回仓库，
+#   页面再从 raw.githubusercontent.com 读 —— 不需要任何服务器，也不需要本地定时任务。
+#
+# 时间：cron 是 UTC。15:20 北京 = 07:20 UTC。
+# 脚本内部还会自己等「上证日K补上今天那根」（最多 45 分钟），
+# 所以这个点设早一点没关系，数据没齐它会等。
+
+on:
+  schedule:
+    - cron: '20 7 * * 1-5'      # 周一到周五 15:20 北京时间
+  workflow_dispatch:             # 手动触发：用来验证连通性 / 补跑
+    inputs:
+      limit:
+        description: '只跑前 N 只（连通性自测用，留空 = 全量）'
+        required: false
+        default: ''
+      no_wait:
+        description: '跳过「等收盘数据就绪」直接跑（补跑历史用）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write                # 需要把 JSON 提交回仓库
+
+concurrency:
+  group: breadth
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 跑批
+        env:
+          LIMIT: ${{ inputs.limit }}
+          NO_WAIT: ${{ inputs.no_wait }}
+        run: |
+          set -euo pipefail
+          ARGS="--out breadth/data/breadth.json"
+          if [ -n "${LIMIT:-}" ]; then ARGS="$ARGS --limit $LIMIT --fresh"; fi
+          if [ "${NO_WAIT:-false}" = "true" ]; then ARGS="$ARGS --no-wait"; fi
+          echo ">>> python tools/breadth_run.py $ARGS"
+          python tools/breadth_run.py $ARGS
+
+      - name: 提交数据
+        run: |
+          set -euo pipefail
+          git config user.name  "breadth-bot"
+          git config user.email "breadth-bot@users.noreply.github.com"
+          if git diff --quiet -- breadth/data/breadth.json; then
+            echo "数据无变化，跳过提交"
+          else
+            git add breadth/data/breadth.json
+            git commit -m "data: $(TZ=Asia/Shanghai date +%Y-%m-%d) 市场宽度"
+            git push
+          fi
+
+      # 跑批失败时把关键信息贴到日志末尾，方便一眼看出是「东财连不上」还是「数据没就绪」
+      - name: 失败诊断
+        if: failure()
+        run: |
+          echo "::warning::跑批失败。常见原因：① 东财对 GitHub 机房 IP 限流；② 收盘数据尚未就绪（脚本等 45 分钟仍没等到）。"

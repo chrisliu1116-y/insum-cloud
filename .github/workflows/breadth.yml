@@ -1,25 +1,25 @@
 name: 市场宽度收盘跑批
 
-# 为什么放在 GitHub Actions：
-#   本地跑批需要一台常开的机器（WorkBuddy 客户端关了就停）。
-#   Actions 是免费的定时容器，工作日自动跑完把 JSON 提交回仓库，
-#   页面再从 raw.githubusercontent.com 读 —— 不需要任何服务器，也不需要本地定时任务。
+# 触发方式（v2，2026-11-10 定稿）：**只有 Cloudflare Worker 的 Cron Trigger 驱动**
+#   CF Cron（云端独立时钟）→ POST workflow_dispatch → 本工作流跑批。
 #
-# 时间：cron 默认 UTC，15:23 北京 = 07:23 UTC。
-# 脚本内部一律用固定 UTC+8 北京时间（容器是 UTC，不能依赖 localtime），
-# 并会自己等「上证日K补上今天那根」（最多 45 分钟）。
-# 三个错峰点位互为兜底：GitHub 官方承认高负载时 schedule 可能被 dropped。
+# 为什么彻底删掉 GitHub 自带的 schedule：
+#   1) 实测本账号的 schedule 通道**整条不生效** —— 2026-11-09/10 建的三个仓库、
+#      四个 workflow（含探针）全部 0 次触发；配置、分支、cron 语法都正确，
+#      手动 dispatch 全 success。这不是「延迟」，是账号级不触发。
+#   2) 依赖一个不报错的定时器比没有定时器更危险：它让人以为有兜底，实际没有。
+#   3) GitHub 官方也承认高负载时会 delay、队列满会 drop，公共仓库 60 天无活动还会自动禁用。
+#   所以定时这件事交给 CF（Worker Cron 由调度器自己记账，可用 GraphQL analytics 核对），
+#   GitHub 这边只保留 workflow_dispatch 作为「被调用」和「手动补跑」的入口。
+#
+# 时间：CF 侧 cron 表达式 `23 7,9 * * 1-5`（UTC）= 北京 15:23 主跑 / 17:23 兜底。
+#   一个表达式只占 1 个 cron 槽位（免费版每账号 5 条）。
+#   脚本内部一律用固定 UTC+8 北京时间（容器是 UTC，不能依赖 localtime），
+#   并会自己等「上证日K补上今天那根」（最多 45 分钟）；数据已是今日完整版时直接跳过，
+#   所以 15:23 成功后再被 17:23 叫起来也不会重复抓 5584 只。
 
 on:
-  schedule:
-    # GitHub 官方明确：高负载时 schedule 会被 delayed，负载足够高时
-    # 「some queued jobs may be dropped」；且公共仓库 60 天无活动会自动禁用。
-    # 单一点位不可靠 → 三个非整点错峰触发（避开官方点名的「整点高峰」）。
-    # 脚本已做幂等：数据已是今日完整版时直接跳过，不会重复抓 5584 只。
-    - cron: '23 7 * * 1-5'      # 北京 15:23 主跑
-    - cron: '51 7 * * 1-5'      # 北京 15:51 兜底一
-    - cron: '17 8 * * 1-5'      # 北京 16:17 兜底二
-  workflow_dispatch:             # 手动触发：用来验证连通性 / 补跑
+  workflow_dispatch:             # 唯一入口：CF Worker Cron 调用 / 手动验证与补跑
     inputs:
       limit:
         description: '只跑前 N 只（连通性自测用，留空 = 全量）'

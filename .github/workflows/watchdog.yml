@@ -1,22 +1,16 @@
 name: 赚钱效应指标 · 漏跑看门狗
 
-# 为什么需要它：
-#   GitHub 官方承认 schedule 在高负载时可能被 dropped；实测 2026-11-10 新建的
-#   workflow 在探针时间点确实一次 schedule 都没触发。三个错峰 cron 互为兜底，
-#   但它们共享同一个时钟源 —— 若整个 schedule 通道没注册，三个全都不会跑。
-#   本工作流在**更晚的另一个时间点**独立检查数据日期，发现漏跑就主动
-#   workflow_dispatch 补跑一次；同时它每天产生仓库活动，顺带避免
-#   「公共仓库 60 天无活动自动禁用定时任务」。
+# 现在的定位：**手动自检工具**（不再是定时任务）。
+#   v2（2026-11-10）：定时全部交给 Cloudflare Worker Cron（见 breadth.yml 顶部注释），
+#   本文件的 schedule 一并删除 —— 留着也不会触发，只会让人误以为有第二道定时兜底。
+#   需要时手动点一次（workflow_dispatch），它会核对线上数据的 run_date 是不是今天，
+#   不是就主动触发 breadth.yml 补跑。
 #
 # 与 breadth.yml 的关系：breadth.yml 的跑批脚本有幂等保护（数据已是今日完整版
-# 直接跳过），watchdog 触发的补跑不会重复抓 5584 只；两者 concurrency group
-# 不同但同一仓库同时最多两个 job，公开仓库免费无成本压力。
+# 直接跳过），watchdog 触发的补跑不会重复抓 5584 只。
 
 on:
-  schedule:
-    - cron: '9 9 * * 1-5'        # 北京 17:09，晚于三次正式跑批
-    - cron: '37 11 * * 1-5'      # 北京 19:37，最后一次补漏
-  workflow_dispatch:              # 手动点一次可做即时自检
+  workflow_dispatch:              # 手动点一次做即时自检
 
 permissions:
   contents: read
@@ -38,7 +32,7 @@ jobs:
           BJ_HOUR=$(TZ=Asia/Shanghai date +%H)
           echo "北京日期 $BJ_DATE / $BJ_HOUR 时"
 
-          # 周末不判漏跑（cron 已是 1-5，双保险）
+          # 周末不判漏跑（交易日之外的日期不该有数据）
           DOW=$(TZ=Asia/Shanghai date +%u)
           if [ "$DOW" -ge 6 ]; then echo "周末，跳过"; echo "need=false" >> "$GITHUB_OUTPUT"; exit 0; fi
 

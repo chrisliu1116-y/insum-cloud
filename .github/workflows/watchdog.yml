@@ -58,7 +58,7 @@ jobs:
           gen = m.get('generated', '')
           print('跑批日期 run_date =', run_date or '(旧格式，无此字段)')
           print('数据末日 trade_date =', trade_date)
-          print('生成时间 generated =', gen, '(北京时间)')
+          print('生成时间 generated =', gen, '(有 generated_tz 字段才是北京时间，旧格式为 UTC)')
           print('今天 =', today)
 
           # 旧格式数据（无 run_date）一律视为需补跑 —— 顺便把时间戳字段升级

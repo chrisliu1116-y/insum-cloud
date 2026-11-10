@@ -29,6 +29,10 @@ on:
         description: '跳过「等收盘数据就绪」直接跑（补跑历史用）'
         type: boolean
         default: false
+      since:
+        description: '补历史起点 YYYYMMDD（如 19900101；填了则全量补抓并提交）'
+        required: false
+        default: ''
 
 permissions:
   contents: write                # 需要把 JSON 提交回仓库
@@ -57,10 +61,15 @@ jobs:
         env:
           LIMIT: ${{ inputs.limit }}
           NO_WAIT: ${{ inputs.no_wait }}
+          SINCE: ${{ inputs.since }}
         run: |
           set -euo pipefail
           ARGS="--out breadth/data/breadth.json"
+          if [ -n "${SINCE:-}" ]; then ARGS="$ARGS --fresh --since $SINCE"; fi
           if [ -n "${LIMIT:-}" ]; then ARGS="$ARGS --limit $LIMIT --fresh"; fi
+          # 默认（无 since / limit）：增量模式 —— 只抓最近 ~130 根日K追加到既有数据，
+          # 跑批从「全量 170s」降到「~40s」，历史数据照常保留，不影响性能。
+          if [ -z "${SINCE:-}" ] && [ -z "${LIMIT:-}" ]; then ARGS="$ARGS --incremental"; fi
           if [ "${NO_WAIT:-false}" = "true" ]; then ARGS="$ARGS --no-wait"; fi
           echo ">>> python tools/breadth_run.py $ARGS"
           python tools/breadth_run.py $ARGS

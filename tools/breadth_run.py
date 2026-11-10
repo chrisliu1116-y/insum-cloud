@@ -42,8 +42,13 @@ OUT_DIR = os.path.join(ROOT, "breadth", "data")
 OUT = os.path.join(OUT_DIR, "breadth.json")
 
 LMT = 750          # 每只股票取多少根日K（约 3 年）
+DELTA_LMT = 80     # 增量模式：只取最近 80 根（RSI9/WR20 暖机后足够覆盖近 ~40 交易日）
 WORKERS = 10       # 并发数
 FLUSH_EVERY = 200  # 每处理多少只落盘一次
+
+# 本次实际抓取用的 lmt / beg（worker 里读取），由 main() 根据模式设置
+LMT_USE = LMT
+BEG = None
 
 _lock = threading.Lock()
 
@@ -109,7 +114,7 @@ def save_state(agg, done, uni, meta):
 def worker(u):
     """返回 (code, {date: [daycnt, total, willrm, newadd, active]} 或 None)"""
     code = u["code"]
-    bars = B.fetch_kline(code, lmt=LMT, fqt=1)
+    bars = B.fetch_kline(code, lmt=LMT_USE, fqt=1, beg=BEG)
     if not bars:
         return code, None
     # 总股本 = 总市值 / 当前不复权价。停牌无现价时用不复权收盘价倒推
@@ -147,16 +152,43 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0, help="只跑前 N 只（调试用）")
     ap.add_argument("--fresh", action="store_true", help="忽略缓存重跑")
+    ap.add_argument("--since", default="", help="补历史起点 YYYYMMDD（配合 --fresh，如 19901201 取全量）")
+    ap.add_argument("--incremental", action="store_true", help="增量模式：只抓最近 N 根，追加到既有数据后")
     ap.add_argument("--workers", type=int, default=WORKERS)
     ap.add_argument("--no-wait", action="store_true", help="不等待收盘数据就绪，直接跑")
     ap.add_argument("--out", default="", help="输出路径（默认 breadth/data/breadth.json；云端跑批用）")
     args = ap.parse_args()
+
+    global LMT_USE, BEG
+    if args.since:
+        BEG = args.since
+        LMT_USE = 20000       # beg 指定起点后，lmt 仍是从最新往回数的上限；
+                              # 放大到 20000 让东财返回「起点至今全部」（A 股最多约 8760 根）
+    elif args.incremental:
+        LMT_USE = DELTA_LMT
+        BEG = None
+    else:
+        LMT_USE = LMT
+        BEG = None
 
     t0 = time.time()
     if not args.no_wait and not wait_ready():
         log("今天的数据还没出来，本次跳过（不发布）")
         sys.exit(2)
     out_path = os.path.abspath(args.out) if args.out else OUT
+    # 增量模式：先读既有数据，稍后把「今天新出的交易日」追加到它后面。
+    old = None
+    if args.incremental and not args.fresh and not args.limit and os.path.exists(out_path):
+        try:
+            with open(out_path, "r", encoding="utf-8") as f:
+                old = json.load(f)
+            if not (old.get("dates") and old.get("total") is not None):
+                old = None
+        except Exception:
+            old = None
+        if old:
+            log(f"增量模式：已有 {len(old['dates'])} 个交易日（{old['dates'][0]} → {old['dates'][-1]}），"
+                f"本次只抓最近 {DELTA_LMT} 根日K")
     # 幂等：多时间点兜底 cron 会触发多次。若现有数据已是「今天且完整」，
     # 直接跳过，避免重复抓 5584 只 / 重复提交。（--fresh 或 --limit 调试不受影响）
     if not args.fresh and not args.limit and os.path.exists(out_path):
@@ -173,7 +205,7 @@ def main():
     os.makedirs(CACHE_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    st = None if args.fresh else load_state()
+    st = None if (args.fresh or args.incremental or args.since) else load_state()
     if st:
         uni = st["uni"]
         agg = st["agg"]
@@ -234,15 +266,30 @@ def main():
     log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {time.time()-t0:.0f}s")
 
     # ---- 聚合 ----
-    dates = sorted(agg.keys())
-    if not dates:
-        log("无数据，退出")
-        return
-    daycnt = [agg[d][0] for d in dates]
-    total = [agg[d][1] for d in dates]
-    willrm = [agg[d][2] for d in dates]
-    newadd = [agg[d][3] for d in dates]
-    active = [agg[d][4] for d in dates]
+    if old:
+        # 增量合并：只把「晚于既有最后交易日」的新日子追加进去。
+        last = old["dates"][-1]
+        new_dates = [d for d in sorted(agg.keys()) if d > last]
+        log(f"新增交易日 {len(new_dates)} 个（> {last}）")
+        if not new_dates:
+            log("没有新交易日，数据保持不变，跳过写入")
+            return
+        dates = old["dates"] + new_dates
+        daycnt = old["daycnt"] + [agg[d][0] for d in new_dates]
+        total = old["total"] + [agg[d][1] for d in new_dates]
+        willrm = old["willrm"] + [agg[d][2] for d in new_dates]
+        newadd = old["newadd"] + [agg[d][3] for d in new_dates]
+        active = old["active"] + [agg[d][4] for d in new_dates]
+    else:
+        dates = sorted(agg.keys())
+        if not dates:
+            log("无数据，退出")
+            return
+        daycnt = [agg[d][0] for d in dates]
+        total = [agg[d][1] for d in dates]
+        willrm = [agg[d][2] for d in dates]
+        newadd = [agg[d][3] for d in dates]
+        active = [agg[d][4] for d in dates]
 
     log(f"交易日 {len(dates)}：{dates[0]} → {dates[-1]}")
     log(f"最新一根：符合总数={total[-1]}  当日家数={daycnt[-1]}  "

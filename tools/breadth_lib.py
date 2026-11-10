@@ -118,13 +118,17 @@ def secid_of(code):
     return "0." + code
 
 
-def fetch_kline(code, lmt=320, fqt=1, retries=3):
-    """返回 bars: [{d,o,c,h,l,v,a}] 升序。fqt=1 前复权。"""
-    d = _get(EM_KLINE, {
+def fetch_kline(code, lmt=320, fqt=1, retries=3, beg=None):
+    """返回 bars: [{d,o,c,h,l,v,a}] 升序。fqt=1 前复权。
+    beg 形如 '19901201'：东财原生支持，用于精确补历史（lmt 大于实际根数时自动取全量）。"""
+    params = {
         "secid": secid_of(code), "klt": 101, "fqt": fqt, "lmt": lmt,
         "end": "20500101", "fields1": "f1,f2,f3,f4,f5,f6",
         "fields2": "f51,f52,f53,f54,f55,f56,f57",
-    }, retries=retries)
+    }
+    if beg:
+        params["beg"] = beg
+    d = _get(EM_KLINE, params, retries=retries)
     if not d or not d.get("data") or not d["data"].get("klines"):
         return []
     bars = []

@@ -1,0 +1,90 @@
+name: 赚钱效应指标 · 漏跑看门狗
+
+# 为什么需要它：
+#   GitHub 官方承认 schedule 在高负载时可能被 dropped；实测 2026-11-10 新建的
+#   workflow 在探针时间点确实一次 schedule 都没触发。三个错峰 cron 互为兜底，
+#   但它们共享同一个时钟源 —— 若整个 schedule 通道没注册，三个全都不会跑。
+#   本工作流在**更晚的另一个时间点**独立检查数据日期，发现漏跑就主动
+#   workflow_dispatch 补跑一次；同时它每天产生仓库活动，顺带避免
+#   「公共仓库 60 天无活动自动禁用定时任务」。
+#
+# 与 breadth.yml 的关系：breadth.yml 的跑批脚本有幂等保护（数据已是今日完整版
+# 直接跳过），watchdog 触发的补跑不会重复抓 5584 只；两者 concurrency group
+# 不同但同一仓库同时最多两个 job，公开仓库免费无成本压力。
+
+on:
+  schedule:
+    - cron: '9 9 * * 1-5'        # 北京 17:09，晚于三次正式跑批
+    - cron: '37 11 * * 1-5'      # 北京 19:37，最后一次补漏
+  workflow_dispatch:              # 手动点一次可做即时自检
+
+permissions:
+  contents: read
+  actions: write                 # 触发 workflow_dispatch 需要
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检查数据是否漏跑
+        id: chk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 北京时间（容器是 UTC）
+          BJ_DATE=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          BJ_HOUR=$(TZ=Asia/Shanghai date +%H)
+          echo "北京日期 $BJ_DATE / $BJ_HOUR 时"
+
+          # 周末不判漏跑（cron 已是 1-5，双保险）
+          DOW=$(TZ=Asia/Shanghai date +%u)
+          if [ "$DOW" -ge 6 ]; then echo "周末，跳过"; echo "need=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+
+          # 读线上 raw，避免 checkout 拿到缓存
+          curl -fsS --max-time 20 \
+            "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/breadth/data/breadth.json?t=$(date +%s)" \
+            -o /tmp/breadth.json || { echo "raw 读取失败，触发补跑"; echo "need=true" >> "$GITHUB_OUTPUT"; exit 0; }
+
+          python - <<'PY'
+          import json, os, datetime
+          d = json.load(open('/tmp/breadth.json', encoding='utf-8'))
+          m = d.get('meta', {})
+          bj = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+          today = bj.strftime('%Y-%m-%d')
+          run_date = m.get('run_date', '')
+          trade_date = m.get('trade_date') or (d.get('dates') or [''])[-1]
+          gen = m.get('generated', '')
+          print('跑批日期 run_date =', run_date or '(旧格式，无此字段)')
+          print('数据末日 trade_date =', trade_date)
+          print('生成时间 generated =', gen, '(北京时间)')
+          print('今天 =', today)
+
+          # 旧格式数据（无 run_date）一律视为需补跑 —— 顺便把时间戳字段升级
+          need = (run_date != today)
+          # 只在收盘后判漏跑，避免盘中误触发
+          if bj.hour < 16: need = False
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('need=%s\n' % ('true' if need else 'false'))
+              f.write('reason=%s\n' % ('run_date=%s != %s' % (run_date or '旧格式', today) if need else 'ok'))
+          PY
+          echo "need=$(grep '^need=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
+
+      - name: 触发补跑
+        if: steps.chk.outputs.need == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "检测到漏跑（${{ steps.chk.outputs.reason }}），触发 breadth.yml 补跑"
+          curl -fsS --max-time 20 -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/breadth.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"no_wait":"true"}}'
+          echo "已触发补跑（no_wait=true：此时已过收盘，直接取当日数据，不再等 45 分钟）"
+
+      - name: 无需补跑
+        if: steps.chk.outputs.need != 'true'
+        run: echo "数据已是今日版本，无需补跑"

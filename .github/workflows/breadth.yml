@@ -12,11 +12,14 @@ name: 赚钱效应指标收盘跑批
 #   所以定时这件事交给 CF（Worker Cron 由调度器自己记账，可用 GraphQL analytics 核对），
 #   GitHub 这边只保留 workflow_dispatch 作为「被调用」和「手动补跑」的入口。
 #
-# 时间：CF 侧 cron 表达式 `23 7,9 * * 1-5`（UTC）= 北京 15:23 主跑 / 17:23 兜底。
-#   一个表达式只占 1 个 cron 槽位（免费版每账号 5 条）。
-#   脚本内部一律用固定 UTC+8 北京时间（容器是 UTC，不能依赖 localtime），
-#   并会自己等「上证日K补上今天那根」（最多 45 分钟）；数据已是今日完整版时直接跳过，
-#   所以 15:23 成功后再被 17:23 叫起来也不会重复抓 5584 只。
+# 时间（v3，2026-11-11）：CF 侧两条 cron 表达式，共占 2 个槽位（免费版每账号 5 条）
+#   `*/10 7,8 * * 1-5` → UTC 07、08 点每 10 分钟 = 北京 15:00–16:50，收盘窗口内尽早拿到当天数据
+#   `23 9 * * 1-5`     → 北京 17:23 兜底
+#   Worker 侧还有「今日数据已发布」闸门：数据一旦落库，后续触发不再 dispatch。
+#   workflow 第一步是轻量就绪探针（只请求 1 次上证日K），当天日K没补上就几秒退出，
+#   不会白跑全量 5580 只 —— 所以高频触发几乎不消耗 runner 时间。
+#   脚本内部一律用固定 UTC+8 北京时间（容器是 UTC，不能依赖 localtime）；
+#   数据已是今日完整版时直接跳过，幂等保护防止重复抓。
 
 on:
   workflow_dispatch:             # 唯一入口：CF Worker Cron 调用 / 手动验证与补跑
@@ -47,17 +50,62 @@ jobs:
     timeout-minutes: 60
 
     steps:
+      # 轻量就绪探针：高频触发时，当天日K还没补上就别白跑 5580 只股票。
+      # 只发 1 个请求（上证指数最近 3 根日K），几秒结束；探针失败一律放行，
+      # 绝不因为探针本身出问题而漏跑（真正的 wait_ready 在脚本里还有一层）。
+      - name: 收盘数据就绪探针
+        id: probe
+        if: inputs.limit == '' && inputs.since == ''
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from datetime import datetime, timedelta, timezone
+          BJ = timezone(timedelta(hours=8))
+          today = datetime.now(BJ).strftime('%Y-%m-%d')
+          url = ('https://push2his.eastmoney.com/api/qt/stock/kline/get'
+                 '?secid=1.000001&klt=101&fqt=1&lmt=3&end=20500101'
+                 '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57')
+          ready = 'true'
+          try:
+              # 周末本来就无当日日K，交给脚本自己的 wait_ready 口径处理，探针不拦截
+              if datetime.now(BJ).weekday() >= 5:
+                  print('周末，探针放行')
+                  raise SystemExit
+              req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=12) as r:
+                  d = json.load(r)
+              bars = (d.get('data') or {}).get('klines') or []
+              last = bars[-1].split(',')[0] if bars else ''
+              print('上证最新日K =', last, '| 北京今天 =', today)
+              ready = 'true' if last == today else 'false'
+          except SystemExit:
+              pass
+          except Exception as e:
+              print('探针异常，放行跑批：', e)
+              ready = 'true'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('ready=' + ready + '\n')
+          PY
+        # 探针未就绪时不算失败，整条工作流以「成功但跳过」收尾，避免刷失败通知
+      - name: 跳过说明
+        if: steps.probe.outputs.ready == 'false'
+        run: echo "::notice::当天上证日K尚未就绪，本次跳过（等待下一次触发）"
+
       - uses: actions/checkout@v4
+        if: steps.probe.outputs.ready != 'false'
 
       - uses: actions/setup-python@v5
+        if: steps.probe.outputs.ready != 'false'
         with:
           python-version: '3.11'
           cache: pip
 
       - name: 安装依赖
+        if: steps.probe.outputs.ready != 'false'
         run: pip install -r requirements.txt
 
       - name: 跑批
+        if: steps.probe.outputs.ready != 'false'
         env:
           LIMIT: ${{ inputs.limit }}
           NO_WAIT: ${{ inputs.no_wait }}
@@ -67,8 +115,9 @@ jobs:
           ARGS="--out breadth/data/breadth.json"
           if [ -n "${SINCE:-}" ]; then ARGS="$ARGS --fresh --since $SINCE"; fi
           if [ -n "${LIMIT:-}" ]; then ARGS="$ARGS --limit $LIMIT --fresh"; fi
-          # 默认（无 since / limit）：增量模式 —— 只抓最近 ~130 根日K追加到既有数据，
-          # 跑批从「全量 170s」降到「~40s」，历史数据照常保留，不影响性能。
+          # 默认（无 since / limit）：增量模式 —— 只抓最近 80 根日K做指标暖机，
+          # 追加新交易日到既有数据；跑批从「全量 170s」降到「~40s」，
+          # 历史 8816 个交易日完整保留，不影响性能。
           if [ -z "${SINCE:-}" ] && [ -z "${LIMIT:-}" ]; then ARGS="$ARGS --incremental"; fi
           if [ "${NO_WAIT:-false}" = "true" ]; then ARGS="$ARGS --no-wait"; fi
           echo ">>> python tools/breadth_run.py $ARGS"
@@ -76,7 +125,8 @@ jobs:
 
       - name: 提交数据
         # 手动跑 limit 小样本（连通性自测）时绝不提交，否则会用 50 只的假数据覆盖全量结果
-        if: success() && (github.event_name != 'workflow_dispatch' || inputs.limit == '')
+        # 探针判定「当天日K未就绪」时也不提交（此时 checkout 都跳过了，没有数据文件）
+        if: success() && steps.probe.outputs.ready != 'false' && (github.event_name != 'workflow_dispatch' || inputs.limit == '')
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -105,7 +155,7 @@ jobs:
         # jsDelivr 的 @main 默认 12 小时缓存，不刷新的话当天收盘数据要晚半天才可见。
         # purge 是公开的免费接口（实测 status=finished / throttled=false），
         # 一天一次不会触发限流；失败也不影响 raw 源，宽度页有竞速兜底。
-        if: success() && (github.event_name != 'workflow_dispatch' || inputs.limit == '')
+        if: success() && steps.probe.outputs.ready != 'false' && (github.event_name != 'workflow_dispatch' || inputs.limit == '')
         run: |
           curl -fsS --max-time 20 \
             "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/breadth/data/breadth.json" \

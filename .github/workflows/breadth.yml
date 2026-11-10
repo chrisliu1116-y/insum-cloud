@@ -81,6 +81,16 @@ jobs:
             git push
           fi
 
+      - name: 刷新 jsDelivr CDN 缓存
+        # jsDelivr 的 @main 默认 12 小时缓存，不刷新的话当天收盘数据要晚半天才可见。
+        # purge 是公开的免费接口（实测 status=finished / throttled=false），
+        # 一天一次不会触发限流；失败也不影响 raw 源，宽度页有竞速兜底。
+        if: success() && inputs.limit == ''
+        run: |
+          curl -fsS --max-time 20 \
+            "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/breadth/data/breadth.json" \
+            || echo "::warning::jsDelivr purge 失败（raw 源仍可正常读取）"
+
       # 跑批失败时把关键信息贴到日志末尾，方便一眼看出是「东财连不上」还是「数据没就绪」
       - name: 失败诊断
         if: failure()

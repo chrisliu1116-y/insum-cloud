@@ -18,6 +18,19 @@ import threading
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone
+
+# GitHub Actions 容器是 UTC。所有「今天/是否收盘/发布时间」都必须用北京时间，
+# 否则 UTC 07:20（= 北京 15:20 定时点）会被判成「未到收盘」而跳过等待，
+# 跑出昨天的数据；meta.generated 也会比北京时间慢 8 小时。
+# 用固定 UTC+8 偏移，不依赖 tzdata / TZ 环境变量，任何机器结果一致。
+BJ = timezone(timedelta(hours=8))
+def bj_now():
+    return datetime.now(BJ)
+def bj_today():
+    return bj_now().strftime('%Y-%m-%d')
+def bj_stamp():
+    return bj_now().strftime('%Y-%m-%d %H:%M:%S')
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
@@ -49,16 +62,16 @@ def wait_ready(max_wait_min=45, step_min=5):
     """收盘后东财要清算一阵子，日K才会补上当天那根。
     这里在跑批前先探一下：如果最新日K还不是今天，就等一会儿再探，
     免得定时任务设早了跑出一份「还差一天」的数据。"""
-    now = time.localtime()
-    today = time.strftime("%Y-%m-%d", now)
-    hhmm = now.tm_hour * 100 + now.tm_min
-    if now.tm_wday >= 5:
-        log(f"  今天是周末（{today}），按最近交易日数据跑")
+    now = bj_now()
+    today = now.strftime("%Y-%m-%d")
+    hhmm = now.hour * 100 + now.minute
+    if now.weekday() >= 5:
+        log(f"  今天是周末（{today} 北京时间），按最近交易日数据跑")
         return True
     # 只有「收盘后到当天结束」才需要等今天那根日K。
     # 凌晨/上午/盘中跑批一律用最近一个交易日，否则会一直等一个还不存在的日子。
     if hhmm < 1500:
-        log(f"  未到收盘（{now.tm_hour:02d}:{now.tm_min:02d}），按最近交易日数据跑")
+        log(f"  未到收盘（北京 {now.hour:02d}:{now.minute:02d}），按最近交易日数据跑")
         return True
     waited = 0
     while True:
@@ -144,6 +157,18 @@ def main():
         log("今天的数据还没出来，本次跳过（不发布）")
         sys.exit(2)
     out_path = os.path.abspath(args.out) if args.out else OUT
+    # 幂等：多时间点兜底 cron 会触发多次。若现有数据已是「今天且完整」，
+    # 直接跳过，避免重复抓 5584 只 / 重复提交。（--fresh 或 --limit 调试不受影响）
+    if not args.fresh and not args.limit and os.path.exists(out_path):
+        try:
+            with open(out_path, "r", encoding="utf-8") as f:
+                old = json.load(f)
+            om = old.get("meta", {})
+            if om.get("to") == bj_today() and int(om.get("valid", 0)) >= 5000:
+                log(f"数据已是今日完整版（{om.get('to')}，有效 {om.get('valid')} 只），跳过本次跑批")
+                return
+        except Exception as e:
+            log(f"  幂等检查跳过（{e}）")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     os.makedirs(CACHE_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -253,7 +278,10 @@ def main():
 
     out = {
         "meta": {
-            "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "generated": bj_stamp(),          # 北京时间，页面可直接展示
+            "generated_tz": "Asia/Shanghai (UTC+8)",
+            "run_date": bj_today(),           # 本次跑批的北京日期
+            "trade_date": dates[-1],          # 数据覆盖到的最后交易日
             "universe": len(uni),
             "valid": ok,
             "days": len(dates),

@@ -1,4 +1,4 @@
-name: 市场宽度收盘跑批
+name: 赚钱效应指标收盘跑批
 
 # 触发方式（v2，2026-11-10 定稿）：**只有 Cloudflare Worker 的 Cron Trigger 驱动**
 #   CF Cron（云端独立时钟）→ POST workflow_dispatch → 本工作流跑批。

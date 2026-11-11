@@ -205,7 +205,7 @@ def main():
                     sse_old = json.load(open(sse_path, encoding="utf-8"))
                 except Exception:
                     sse_old = None
-                if not sse_old or sse_old.get("meta", {}).get("to") != om.get("to"):
+                if not sse_is_valid(sse_path, om.get("to")):
                     log("宽度已今日但 sse.json 缺失/旧，补齐上证日K")
                     write_sse(sse_path)
                 else:
@@ -288,7 +288,7 @@ def main():
             # 避免今天“insum 已更新 / sse 缺失或旧”的半新半旧状态持续到收盘后。
             if bj_today() == last:
                 sse_path = os.path.join(os.path.dirname(out_path), "sse.json")
-                if not os.path.exists(sse_path) or json.load(open(sse_path, encoding="utf-8")).get("meta", {}).get("to") != last:
+                if not sse_is_valid(sse_path, last):
                     log("宽度已今日但 sse.json 缺失/旧，补齐上证日K")
                     write_sse(sse_path)
             else:
@@ -437,6 +437,22 @@ def fetch_spot_bar_000001():
     return {"d": dt.strftime("%Y-%m-%d"), "o": float(o), "c": float(c),
             "h": float(h), "l": float(l), "v": float(v or 0), "a": float(a or 0),
             "_ts": dt.strftime("%Y-%m-%d %H:%M:%S"), "_src": "spot"}
+
+
+def sse_is_valid(path, today):
+    """sse.json 是否可直接复用：日期是今日 **且** 末收盘在指数点位量级。
+
+    只查日期是不够的：抓成个股时（secid 0.000001 = 平安银行，末收盘 11.71）
+    meta.to 同样是今日，会被误判成「已是最新」而永久跳过重写 —— 线上就一直是错数据。
+    """
+    try:
+        o = json.load(open(path, encoding="utf-8"))
+    except Exception:
+        return False
+    if (o.get("meta") or {}).get("to") != today:
+        return False
+    c = o.get("c") or []
+    return bool(c) and 50 < c[-1] < 20000
 
 
 def write_sse(sse_path, breadth_path=None):

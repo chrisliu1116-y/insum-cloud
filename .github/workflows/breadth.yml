@@ -149,7 +149,9 @@ jobs:
           PY
           git config user.name  "breadth-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- breadth/data/breadth.json breadth/data/sse.json; then
+          # v276：git diff 不看未跟踪的新文件（首次生成 sse.json 会被误判“无变化”），
+          # 用 status 判断两个数据文件是否需要提交。
+          if [ -z "$(git status --porcelain -- breadth/data/breadth.json breadth/data/sse.json)" ]; then
             echo "数据无变化，跳过提交"
           else
             git add breadth/data/breadth.json breadth/data/sse.json

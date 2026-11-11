@@ -197,7 +197,19 @@ def main():
                 old = json.load(f)
             om = old.get("meta", {})
             if om.get("to") == bj_today() and int(om.get("valid", 0)) >= 5000:
-                log(f"数据已是今日完整版（{om.get('to')}，有效 {om.get('valid')} 只），跳过本次跑批")
+                # v276：宽度已是今日时，仍要检查上证 sse.json 是否缺/旧。
+                # 否则会出现“insum 新 / 上证旧”并直接被幂等闸跳过。
+                sse_path = os.path.join(os.path.dirname(out_path), "sse.json")
+                sse_old = None
+                try:
+                    sse_old = json.load(open(sse_path, encoding="utf-8"))
+                except Exception:
+                    sse_old = None
+                if not sse_old or sse_old.get("meta", {}).get("to") != om.get("to"):
+                    log("宽度已今日但 sse.json 缺失/旧，补齐上证日K")
+                    write_sse(sse_path)
+                else:
+                    log(f"数据已是今日完整版（{om.get('to')}，有效 {om.get('valid')} 只，sse {sse_old['meta']['to']}），跳过本次跑批")
                 return
         except Exception as e:
             log(f"  幂等检查跳过（{e}）")

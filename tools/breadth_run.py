@@ -470,18 +470,25 @@ def write_sse(sse_path, breadth_path=None):
     with open(b_path, encoding="utf-8") as f:
         b_last = json.load(f)["dates"][-1]
     # v277：日K未落当天那根时，用 push2 收盘快照补一根，不再等行情源「清算」
+    # v277：当日那根一律用收盘快照，不等日K接口，也不等"清算"。
+    # 用户口径：「insum 一更新，就从上证抓一个快照过来，两边同步更新」。
+    # 指数收盘价/开高低/量/额在收盘瞬间定型，快照与 insum 同一时刻取到，
+    # 天然对齐；日K接口当日那根反而可能滞后几十分钟。
     src = "kline"
     spot_meta = None
-    if bars[-1]["d"][:10] < b_last:
-        sp = fetch_spot_bar_000001()
-        if sp and sp["d"] == b_last:
-            bars.append({k: sp[k] for k in ("d", "o", "c", "h", "l", "v", "a")})
-            src = "kline+snapshot"
-            spot_meta = {"spot_d": sp["d"], "spot_ts": sp["_ts"], "spot_close": sp["c"]}
-            log(f"日K缺 {b_last}，已用收盘快照补一根"
-                f"（快照时间 {sp['_ts']}，收 {sp['c']}）→ 不再等行情源清算")
+    sp = fetch_spot_bar_000001()
+    if sp and sp["d"] == b_last:
+        bar = {k: sp[k] for k in ("d", "o", "c", "h", "l", "v", "a")}
+        if bars[-1]["d"][:10] == b_last:
+            bars[-1] = bar
+            log(f"当日 bar 用收盘快照覆盖（{sp['_ts']}，收 {sp['c']}）—— 与 insum 同批同步")
         else:
-            log(f"日K缺 {b_last}，且收盘快照不可用（{sp and sp['d'] or 'no-data'}）")
+            bars.append(bar)
+            log(f"日K缺 {b_last}，用收盘快照补一根（{sp['_ts']}，收 {sp['c']}）")
+        src = "kline+snapshot"
+        spot_meta = {"spot_d": sp["d"], "spot_ts": sp["_ts"], "spot_close": sp["c"]}
+    elif bars[-1]["d"][:10] < b_last:
+        log(f"日K缺 {b_last}，且收盘快照不可用（{sp and sp['d'] or 'no-data'}）")
     dates = [b["d"][:10] for b in bars]
     last = dates[-1]
     if last != b_last:

@@ -376,6 +376,36 @@ def main():
 
 
 EM_SPOT = "https://push2.eastmoney.com/api/qt/stock/get"
+SSE_SECID = "1.000001"          # 上证指数（沪市 1.）；写成 000001 会被判成深市平安银行
+
+
+def fetch_index_bars(lmt=10000, beg="19900101"):
+    """上证指数全量日K（显式 secid = 1.000001）。
+
+    ⚠️ 不能用 B.fetch_kline("000001")：`secid_of` 把 0 开头判成深市 → **0.000001 = 平安银行**，
+    抓回来的是个股（末收盘 ~11.71、起点 1991-04-03、8515 根），而指数是 3680 量级、
+    起点 1990-12-19。这个错会让"上证 K 线"整条画错却看起来有数据。
+    """
+    params = {
+        "secid": SSE_SECID, "klt": 101, "fqt": 1, "lmt": lmt, "end": "20500101",
+        "beg": beg, "fields1": "f1,f2,f3,f4,f5,f6",
+        "fields2": "f51,f52,f53,f54,f55,f56,f57",
+    }
+    d = B._get(B.EM_KLINE, params)
+    if not d or not d.get("data") or not d["data"].get("klines"):
+        return []
+    out = []
+    for line in d["data"]["klines"]:
+        p = line.split(",")
+        if len(p) < 7:
+            continue
+        try:
+            out.append({"d": p[0], "o": float(p[1]), "c": float(p[2]),
+                        "h": float(p[3]), "l": float(p[4]),
+                        "v": float(p[5]), "a": float(p[6])})
+        except Exception:
+            continue
+    return out
 
 
 def fetch_spot_bar_000001():
@@ -411,9 +441,15 @@ def fetch_spot_bar_000001():
 
 def write_sse(sse_path, breadth_path=None):
     """同批次生成上证全量日K（data/sse.json）。..."""
-    bars = B.fetch_kline("000001", lmt=10000, fqt=1, beg="19900101")
+    bars = fetch_index_bars(lmt=10000)
     if not bars:
         raise RuntimeError("上证全量日K抓取为空，拒绝写入 sse.json")
+    # 标的护栏：指数点位量级 + 起点年份。抓成个股（如平安银行 11.71 / 1991-04-03）
+    # 时这里会直接拒绝写入，不再静默产出一条"看起来有数据"的错 K 线。
+    if not (50 < bars[-1]["c"] < 20000):
+        raise RuntimeError(f"上证日K末根收盘 {bars[-1]['c']} 不在指数点位量级，疑似抓错标的，拒绝写入")
+    if bars[0]["d"][:4] > "1992":
+        raise RuntimeError(f"上证日K起点 {bars[0]['d']} 偏晚（应为 1990-12-19 起），疑似抓错标的，拒绝写入")
     b_path = breadth_path or os.path.join(os.path.dirname(sse_path), "breadth.json")
     with open(b_path, encoding="utf-8") as f:
         b_last = json.load(f)["dates"][-1]

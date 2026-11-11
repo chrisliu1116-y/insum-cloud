@@ -16,8 +16,10 @@ name: 赚钱效应指标收盘跑批
 #   `*/10 7 * * 1-5`   → 北京 15:00–15:50 每 10 分钟，收盘窗口内尽早拿到当天数据
 #   `0 8 * * 1-5`      → 北京 16:00 兜底（用户口径：正常 16 点应已清算/生成完毕）
 #   Worker 侧还有「宽度 + 上证日K都同日」的发布闸门；两个文件缺一个都继续触发。
-#   workflow 第一步是轻量就绪探针（只请求 1 次上证日K），当天日K没补上就几秒退出，
-#   不会白跑全量 5580 只 —— 所以高频触发几乎不消耗 runner 时间。
+#   workflow 第一步是轻量就绪探针：只判断「是否交易日 / 北京 15:00 后」，
+#   不再请求上证日K、也不再等「当天日K补上」（旧口径会阻塞跑批、导致上证滞后）。
+#   收盘后当日那根由 breadth_run.py / write_sse() 用 push2 收盘快照补齐，
+#   与 insum 同批同步更新。15:00 前 / 非交易日不跑；高频触发几乎不耗 runner 时间。
 #   脚本内部一律用固定 UTC+8 北京时间（容器是 UTC，不能依赖 localtime）；
 #   数据已是今日完整版时直接跳过，幂等保护防止重复抓。
 
@@ -50,46 +52,44 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      # 轻量就绪探针：高频触发时，当天日K还没补上就别白跑 5580 只股票。
-      # 只发 1 个请求（上证指数最近 3 根日K），几秒结束；探针失败一律放行，
-      # 绝不因为探针本身出问题而漏跑（真正的 wait_ready 在脚本里还有一层）。
+      # 轻量就绪探针：只按「交易日 + 北京 15:00 后」放行，不再探测当天日K是否补上。
+      # 旧口径（要求最新日K == 今天）与 write_sse() 的 push2 收盘快照补根冲突，
+      # 是「insum 新 / 上证旧」不同步的主阻塞。收盘后当日那根由脚本内快照补齐。
+      # 15:00 前 / 非交易日不跑；真正的 wait_ready 在脚本里还有一层。
       - name: 收盘数据就绪探针
         id: probe
         if: inputs.limit == '' && inputs.since == ''
         run: |
           python3 - <<'PY'
-          import json, os, urllib.request
+          import os
           from datetime import datetime, timedelta, timezone
           BJ = timezone(timedelta(hours=8))
-          today = datetime.now(BJ).strftime('%Y-%m-%d')
-          url = ('https://push2his.eastmoney.com/api/qt/stock/kline/get'
-                 '?secid=1.000001&klt=101&fqt=1&lmt=3&end=20500101'
-                 '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57')
+          now = datetime.now(BJ)
+          today = now.strftime('%Y-%m-%d')
+          hhmm = now.hour * 100 + now.minute
+          # v278：不再请求 push2his 日K、也不再要求「最新日K == 今天」。
+          # 日K 当天那根常滞后几十分钟甚至当天不落，用它当闸门会让 breadth 已
+          # 更新时 sse 被整批跳过，正是「insum 新 / 上证旧」不同步的主阻塞。
+          # 当日那根由 breadth_run.py / write_sse() 用 push2 收盘快照补齐。
           ready = 'true'
-          try:
-              # 周末本来就无当日日K，交给脚本自己的 wait_ready 口径处理，探针不拦截
-              if datetime.now(BJ).weekday() >= 5:
-                  print('周末，探针放行')
-                  raise SystemExit
-              req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-              with urllib.request.urlopen(req, timeout=12) as r:
-                  d = json.load(r)
-              bars = (d.get('data') or {}).get('klines') or []
-              last = bars[-1].split(',')[0] if bars else ''
-              print('上证最新日K =', last, '| 北京今天 =', today)
-              ready = 'true' if last == today else 'false'
-          except SystemExit:
-              pass
-          except Exception as e:
-              print('探针异常，放行跑批：', e)
-              ready = 'true'
+          if now.weekday() >= 5:
+              # 非交易日（周末）：无当日收盘，交给脚本 wait_ready 用最近一个交易日
+              # 数据跑；仍放行手动补跑（CF cron 本身只在周一至周五触发）。
+              print('周末/非交易日，探针放行（脚本按最近交易日数据跑）| 北京今天 =', today)
+          elif hhmm < 1500:
+              # 北京 15:00 前未收盘：不跑，等收盘窗口内的下一次触发
+              ready = 'false'
+              print('北京 %02d:%02d 未到 15:00 收盘，跳过' % (now.hour, now.minute))
+          else:
+              # 工作日 15:00 之后：直接放行，由脚本内收盘快照补齐当日那根
+              print('工作日 15:00 后直接放行（收盘快照在脚本内补齐当日那根）| 北京今天 =', today)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write('ready=' + ready + '\n')
           PY
-        # 探针未就绪时不算失败，整条工作流以「成功但跳过」收尾，避免刷失败通知
+        # 未到收盘窗口时不算失败，整条工作流以「成功但跳过」收尾，避免刷失败通知
       - name: 跳过说明
         if: steps.probe.outputs.ready == 'false'
-        run: echo "::notice::当天上证日K尚未就绪，本次跳过（等待下一次触发）"
+        run: echo "::notice::未到北京 15:00 收盘窗口，本次跳过（等待下一次触发）"
 
       - uses: actions/checkout@v4
         if: steps.probe.outputs.ready != 'false'
@@ -130,7 +130,7 @@ jobs:
 
       - name: 提交数据
         # 手动跑 limit 小样本（连通性自测）时绝不提交，否则会用 50 只的假数据覆盖全量结果
-        # 探针判定「当天日K未就绪」时也不提交（此时 checkout 都跳过了，没有数据文件）
+        # 探针判定「未到收盘窗口」时也不提交（此时 checkout 都跳过了，没有数据文件）
         if: success() && steps.probe.outputs.ready != 'false' && (github.event_name != 'workflow_dispatch' || inputs.limit == '')
         run: |
           set -euo pipefail

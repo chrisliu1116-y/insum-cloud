@@ -58,38 +58,41 @@ def log(*a):
 
 
 def latest_trade_day():
-    """拿上证指数的最后一根日K日期，用来判断「今天的收盘数据出来了没」。"""
-    bars = B.fetch_kline("000001", lmt=3, fqt=1)
+    """拿上证指数的最后一根日K日期，用来判断「今天的收盘数据出来了没」。
+
+    ⚠️ 不能用 B.fetch_kline("000001")：secid_of 会把 000001 判成深市 → 0.000001
+    （平安银行个股），与文件下方 fetch_index_bars 的注释自相矛盾。必须走显式
+    secid=1.000001 的 fetch_index_bars（上证指数）。该函数定义在文件后半段，
+    函数体在调用时才解析全局名，前向引用没有问题。
+    """
+    bars = fetch_index_bars(lmt=3)
     return bars[-1]["d"] if bars else None
 
 
-def wait_ready(max_wait_min=45, step_min=5):
-    """收盘后东财要清算一阵子，日K才会补上当天那根。
-    这里在跑批前先探一下：如果最新日K还不是今天，就等一会儿再探，
-    免得定时任务设早了跑出一份「还差一天」的数据。"""
+def wait_ready():
+    """跑批前判断数据是否就绪（v278：收盘即就绪）。
+
+    工作日北京 15:00 之后直接放行：指数开/高/低/收/量/额在收盘瞬间定型，
+    当日那根由 write_sse() 用 push2 收盘快照补齐，不再等东财日K接口「清算」
+    后补当天那根，也不再以 latest_trade_day()==today 作条件。
+    旧逻辑会 sleep 最多 45 分钟再 sys.exit(2)，在日K当天不落/滞后的日子整批
+    漏跑，是「insum 新 / 上证旧」的残留阻塞。
+    15:00 前与周末的原有行为保留（按最近一个交易日数据跑）。
+    """
     now = bj_now()
     today = now.strftime("%Y-%m-%d")
     hhmm = now.hour * 100 + now.minute
     if now.weekday() >= 5:
         log(f"  今天是周末（{today} 北京时间），按最近交易日数据跑")
         return True
-    # 只有「收盘后到当天结束」才需要等今天那根日K。
-    # 凌晨/上午/盘中跑批一律用最近一个交易日，否则会一直等一个还不存在的日子。
+    # 凌晨/上午/盘中跑批一律用最近一个交易日，否则会等一个还不存在的日子。
     if hhmm < 1500:
         log(f"  未到收盘（北京 {now.hour:02d}:{now.minute:02d}），按最近交易日数据跑")
         return True
-    waited = 0
-    while True:
-        d = latest_trade_day()
-        if d == today:
-            log(f"  数据就绪：最新日K = {d}")
-            return True
-        if waited >= max_wait_min:
-            log(f"  等待超时（{max_wait_min} 分钟）：最新日K = {d}，今天 = {today}")
-            return False
-        log(f"  数据未就绪（最新 {d}，今天 {today}），{step_min} 分钟后重试…")
-        time.sleep(step_min * 60)
-        waited += step_min
+    # 工作日 15:00 之后：收盘时间即就绪，当日那根由 push2 快照补齐。
+    log(f"  已收盘（北京 {now.hour:02d}:{now.minute:02d}），直接就绪；"
+        f"当日上证那根由收盘快照补齐，不等日K清算")
+    return True
 
 
 def load_state():
@@ -416,7 +419,14 @@ def fetch_spot_bar_000001():
     全部定型（实测 16:11 时间戳、六项齐全）。指数日线这 6 个值属于「收盘即终值」，
     清算/交收改的是资金与持仓，不会回头改它们 —— 所以不必等"清算"。
 
-    返回 {d,o,c,h,l,v,a,_ts,_src}；拿不到或非当日返回 None。
+    返回 {d,o,c,h,l,v,a,_ts,_src}；拿不到或字段非法返回 None。
+
+    v278：f86 时间戳在盘后/跨日常与 breadth 交易日不等（清算后跳到次日凌晨、
+    或行情源停在上一交易日），旧逻辑要求 sp["d"] == b_last 会让快照分支永不生效。
+    放宽判断放在 write_sse() 的 spot_usable(sp, b_last)：以 breadth.json 的
+    dates[-1] 为交易日，只要快照「不早于该日前 3 个自然日 + 收盘值在指数点位
+    量级 + f86 与交易日同周」就允许覆盖/补当日那根，且当日那根日期一律用
+    b_last（不是 sp["d"]）。这里只做基础校验，并保留 _ts/_src 供 write_sse 审计。
     """
     d = B._get(EM_SPOT, {
         "secid": "1.000001", "fltt": 2, "invt": 2,
@@ -434,25 +444,67 @@ def fetch_spot_bar_000001():
     v, a = x.get("f47"), x.get("f48")
     if not all(isinstance(z, (int, float)) and z > 0 for z in (o, c, h, l)):
         return None
+    # 指数点位护栏：收盘值不在量级内（如抓成平安银行 11.71）直接判不可用
+    if not (50 < c < 20000):
+        return None
     return {"d": dt.strftime("%Y-%m-%d"), "o": float(o), "c": float(c),
             "h": float(h), "l": float(l), "v": float(v or 0), "a": float(a or 0),
             "_ts": dt.strftime("%Y-%m-%d %H:%M:%S"), "_src": "spot"}
 
 
+def spot_usable(sp, b_last):
+    """判断 push2 收盘快照能否用来补/覆盖 breadth 交易日 b_last 那根。
+
+    旧逻辑要求 sp["d"] == b_last 才生效，但 f86 时间戳盘后/跨日会让二者不等，
+    导致快照分支永不进、to_src 永远退回 "kline"（线上实测 breadth 与 sse 差近
+    5 小时、sse 永远没有 spot 字段）。v278 放宽为：
+      ① 快照日期不早于 b_last 前 3 个自然日（允许盘后时间戳跨到次日）；
+      ② 收盘值在 50..20000（指数点位量级，顺带挡掉抓成个股）；
+      ③ 不是明显陈旧：f86 时间戳与 b_last 同一 ISO 周。
+    返回 (可用?, 原因)；不可用原因供 write_sse 打明确日志，避免静默退回 kline。
+    """
+    if not sp:
+        return False, "抓取为空 / f86 缺失 / OHLC 非法"
+    sd, c, ts = sp.get("d"), sp.get("c"), sp.get("_ts")
+    try:
+        b_dt = datetime.strptime(b_last, "%Y-%m-%d")
+        s_dt = datetime.strptime(sd, "%Y-%m-%d")
+    except Exception:
+        return False, f"日期无法解析（spot={sd}, b_last={b_last}）"
+    if not (isinstance(c, (int, float)) and 50 < c < 20000):
+        return False, f"收盘 {c} 不在指数点位量级（50..20000）"
+    if s_dt < b_dt - timedelta(days=3):
+        return False, f"快照日期 {sd} 早于 {b_last} 前 3 天，明显陈旧"
+    try:
+        ts_dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+        if ts_dt.isocalendar()[:2] != b_dt.isocalendar()[:2]:
+            return False, f"f86 时间戳 {ts} 与交易日 {b_last} 不同周，明显陈旧"
+    except Exception:
+        return False, f"f86 时间戳无法解析（{ts}）"
+    return True, ""
+
+
 def sse_is_valid(path, today):
-    """sse.json 是否可直接复用：日期是今日 **且** 末收盘在指数点位量级。
+    """sse.json 是否可直接复用：日期今日 + 末收盘在指数点位量级 + 必须是快照版。
 
     只查日期是不够的：抓成个股时（secid 0.000001 = 平安银行，末收盘 11.71）
-    meta.to 同样是今日，会被误判成「已是最新」而永久跳过重写 —— 线上就一直是错数据。
+    meta.to 同样是今日，会被误判成「已是最新」而永久跳过重写。
+    v278：还必须是「收盘快照版」（meta.spot 存在 或 to_src=='kline+snapshot'）。
+    线上那份「今天但是旧版 kline、无 spot」的 sse.json 因此判为无效，由幂等闸
+    触发 write_sse() 用快照补齐 —— 首次补跑会多一次提交，属预期。
     """
     try:
         o = json.load(open(path, encoding="utf-8"))
     except Exception:
         return False
-    if (o.get("meta") or {}).get("to") != today:
+    m = o.get("meta") or {}
+    if m.get("to") != today:
         return False
     c = o.get("c") or []
-    return bool(c) and 50 < c[-1] < 20000
+    if not (bool(c) and 50 < c[-1] < 20000):
+        return False
+    # 必须带收盘快照：旧版 kline（无 spot）即便是今天也要重写成 kline+snapshot
+    return bool(m.get("spot")) or m.get("to_src") == "kline+snapshot"
 
 
 def write_sse(sse_path, breadth_path=None):
@@ -477,18 +529,27 @@ def write_sse(sse_path, breadth_path=None):
     src = "kline"
     spot_meta = None
     sp = fetch_spot_bar_000001()
-    if sp and sp["d"] == b_last:
-        bar = {k: sp[k] for k in ("d", "o", "c", "h", "l", "v", "a")}
+    usable, why = spot_usable(sp, b_last)
+    if usable:
+        # 放宽后 sp["d"] 可能与 b_last 不等（f86 盘后跨日/滞后）。当日那根一律用
+        # 快照的 OHLCVA，但日期对齐 breadth 交易日 b_last，保证末日护栏通过。
+        bar = {k: sp[k] for k in ("o", "c", "h", "l", "v", "a")}
+        bar["d"] = b_last
         if bars[-1]["d"][:10] == b_last:
             bars[-1] = bar
-            log(f"当日 bar 用收盘快照覆盖（{sp['_ts']}，收 {sp['c']}）—— 与 insum 同批同步")
+            log(f"当日 bar 用收盘快照覆盖（f86 {sp['_ts']}，收 {sp['c']}，"
+                f"快照日 {sp['d']} → 对齐交易日 {b_last}）—— 与 insum 同批同步")
         else:
             bars.append(bar)
-            log(f"日K缺 {b_last}，用收盘快照补一根（{sp['_ts']}，收 {sp['c']}）")
+            log(f"日K缺 {b_last}，用收盘快照补一根（f86 {sp['_ts']}，收 {sp['c']}，"
+                f"快照日 {sp['d']} → 对齐交易日 {b_last}）")
         src = "kline+snapshot"
         spot_meta = {"spot_d": sp["d"], "spot_ts": sp["_ts"], "spot_close": sp["c"]}
-    elif bars[-1]["d"][:10] < b_last:
-        log(f"日K缺 {b_last}，且收盘快照不可用（{sp and sp['d'] or 'no-data'}）")
+    else:
+        # 不静默退回 kline：明确记录快照为何没生效（缺数据 / 护栏 / 跨周陈旧…）。
+        # 若日K末日 != b_last，下面的「上证日K末日 != breadth 交易日」护栏会拒写。
+        log(f"收盘快照不可用，to_src 保持 {src}（原因：{why}）；"
+            f"若日K末日 != {b_last}，末日护栏将拒绝写入")
     dates = [b["d"][:10] for b in bars]
     last = dates[-1]
     if last != b_last:

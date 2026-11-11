@@ -375,16 +375,63 @@ def main():
         write_sse(os.path.join(os.path.dirname(out_path), "sse.json"))
 
 
+EM_SPOT = "https://push2.eastmoney.com/api/qt/stock/get"
+
+
+def fetch_spot_bar_000001():
+    """收盘后用 push2 实时快照拼出「当日」上证 bar。
+
+    为什么需要它：push2his 的日 K 常常要等几分钟到几十分钟才落当天那根（有时
+    干脆当天不落，只能等次日），而 push2 快照在收盘那一刻就把 开/高/低/收/量/额
+    全部定型（实测 16:11 时间戳、六项齐全）。指数日线这 6 个值属于「收盘即终值」，
+    清算/交收改的是资金与持仓，不会回头改它们 —— 所以不必等"清算"。
+
+    返回 {d,o,c,h,l,v,a,_ts,_src}；拿不到或非当日返回 None。
+    """
+    d = B._get(EM_SPOT, {
+        "secid": "1.000001", "fltt": 2, "invt": 2,
+        "fields": "f43,f44,f45,f46,f47,f48,f57,f58,f60,f86",
+    }, retries=3)
+    x = (d or {}).get("data") or {}
+    ts = x.get("f86")
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromtimestamp(int(ts), BJ)
+    except Exception:
+        return None
+    o, c, h, l = x.get("f46"), x.get("f43"), x.get("f44"), x.get("f45")
+    v, a = x.get("f47"), x.get("f48")
+    if not all(isinstance(z, (int, float)) and z > 0 for z in (o, c, h, l)):
+        return None
+    return {"d": dt.strftime("%Y-%m-%d"), "o": float(o), "c": float(c),
+            "h": float(h), "l": float(l), "v": float(v or 0), "a": float(a or 0),
+            "_ts": dt.strftime("%Y-%m-%d %H:%M:%S"), "_src": "spot"}
+
+
 def write_sse(sse_path, breadth_path=None):
     """同批次生成上证全量日K（data/sse.json）。..."""
     bars = B.fetch_kline("000001", lmt=10000, fqt=1, beg="19900101")
     if not bars:
         raise RuntimeError("上证全量日K抓取为空，拒绝写入 sse.json")
-    dates = [b["d"][:10] for b in bars]
-    last = dates[-1]
     b_path = breadth_path or os.path.join(os.path.dirname(sse_path), "breadth.json")
     with open(b_path, encoding="utf-8") as f:
         b_last = json.load(f)["dates"][-1]
+    # v277：日K未落当天那根时，用 push2 收盘快照补一根，不再等行情源「清算」
+    src = "kline"
+    spot_meta = None
+    if bars[-1]["d"][:10] < b_last:
+        sp = fetch_spot_bar_000001()
+        if sp and sp["d"] == b_last:
+            bars.append({k: sp[k] for k in ("d", "o", "c", "h", "l", "v", "a")})
+            src = "kline+snapshot"
+            spot_meta = {"spot_d": sp["d"], "spot_ts": sp["_ts"], "spot_close": sp["c"]}
+            log(f"日K缺 {b_last}，已用收盘快照补一根"
+                f"（快照时间 {sp['_ts']}，收 {sp['c']}）→ 不再等行情源清算")
+        else:
+            log(f"日K缺 {b_last}，且收盘快照不可用（{sp and sp['d'] or 'no-data'}）")
+    dates = [b["d"][:10] for b in bars]
+    last = dates[-1]
     if last != b_last:
         raise RuntimeError(f"上证日K末日 {last} != breadth 交易日 {b_last}，拒绝半新半旧提交")
     o = [round(b["o"], 2) for b in bars]
@@ -399,6 +446,9 @@ def write_sse(sse_path, breadth_path=None):
             "to": last,
             "from": dates[0],
             "days": len(dates),
+            # v277 数据来源可审计：kline = 日K接口；kline+snapshot = 末根由收盘快照补齐
+            "to_src": src,
+            **({"spot": spot_meta} if spot_meta else {}),
         },
         "dates": dates, "o": o, "h": h, "l": l, "c": c,
     }

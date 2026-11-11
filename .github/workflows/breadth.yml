@@ -104,6 +104,11 @@ jobs:
         if: steps.probe.outputs.ready != 'false'
         run: pip install -r requirements.txt
 
+      - name: 自检（上证快照补根逻辑）
+        # 只跑本地逻辑分支（不联网）：日K缺当日 → 快照补一根 / 快照也旧 → 拒绝写入
+        if: steps.probe.outputs.ready != 'false'
+        run: python tools/test_sse_snapshot.py
+
       - name: 跑批
         if: steps.probe.outputs.ready != 'false'
         env:

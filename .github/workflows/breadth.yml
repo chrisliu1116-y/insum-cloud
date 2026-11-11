@@ -12,10 +12,10 @@ name: 赚钱效应指标收盘跑批
 #   所以定时这件事交给 CF（Worker Cron 由调度器自己记账，可用 GraphQL analytics 核对），
 #   GitHub 这边只保留 workflow_dispatch 作为「被调用」和「手动补跑」的入口。
 #
-# 时间（v3，2026-11-11）：CF 侧两条 cron 表达式，共占 2 个槽位（免费版每账号 5 条）
-#   `*/10 7,8 * * 1-5` → UTC 07、08 点每 10 分钟 = 北京 15:00–16:50，收盘窗口内尽早拿到当天数据
-#   `23 9 * * 1-5`     → 北京 17:23 兜底
-#   Worker 侧还有「今日数据已发布」闸门：数据一旦落库，后续触发不再 dispatch。
+# 时间（v4，2026-11-11）：CF 侧两条 cron 表达式，共占 2 个槽位（免费版每账号 5 条）
+#   `*/10 7 * * 1-5`   → 北京 15:00–15:50 每 10 分钟，收盘窗口内尽早拿到当天数据
+#   `0 8 * * 1-5`      → 北京 16:00 兜底（用户口径：正常 16 点应已清算/生成完毕）
+#   Worker 侧还有「宽度 + 上证日K都同日」的发布闸门；两个文件缺一个都继续触发。
 #   workflow 第一步是轻量就绪探针（只请求 1 次上证日K），当天日K没补上就几秒退出，
 #   不会白跑全量 5580 只 —— 所以高频触发几乎不消耗 runner 时间。
 #   脚本内部一律用固定 UTC+8 北京时间（容器是 UTC，不能依赖 localtime）；
@@ -140,14 +140,20 @@ jobs:
               raise SystemExit('数据异常（股票池或交易日过少），拒绝提交')
           if not m.get('generated_tz') or not m.get('trade_date'):
               raise SystemExit('meta 缺时区/交易日字段，疑似旧版脚本，拒绝提交')
+          # v276：宽度与上证 K 线必须同日成对，防止“insum 新 / 上证旧”
+          s = json.load(open('breadth/data/sse.json', encoding='utf-8'))
+          if s['meta']['to'] != m['trade_date']:
+              raise SystemExit('sse.json 末日 %s != breadth 交易日 %s，拒绝提交' %
+                               (s['meta']['to'], m['trade_date']))
+          print('上证日K %d 根 / 末日 %s（与 breadth 同日）' % (len(s['dates']), s['meta']['to']))
           PY
           git config user.name  "breadth-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- breadth/data/breadth.json; then
+          if git diff --quiet -- breadth/data/breadth.json breadth/data/sse.json; then
             echo "数据无变化，跳过提交"
           else
-            git add breadth/data/breadth.json
-            git commit -m "data: $(TZ=Asia/Shanghai date +%Y-%m-%d) 市场宽度"
+            git add breadth/data/breadth.json breadth/data/sse.json
+            git commit -m "data: $(TZ=Asia/Shanghai date +%Y-%m-%d) 市场宽度+上证日K"
             git push
           fi
 
@@ -160,6 +166,9 @@ jobs:
           curl -fsS --max-time 20 \
             "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/breadth/data/breadth.json" \
             || echo "::warning::jsDelivr purge 失败（raw 源仍可正常读取）"
+          curl -fsS --max-time 20 \
+            "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/breadth/data/sse.json" \
+            || echo "::warning::jsDelivr sse.json purge 失败（raw 源仍可正常读取）"
 
       # 跑批失败时把关键信息贴到日志末尾，方便一眼看出是「东财连不上」还是「数据没就绪」
       - name: 失败诊断

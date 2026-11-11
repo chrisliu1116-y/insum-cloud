@@ -349,6 +349,44 @@ def main():
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     sz = os.path.getsize(out_path) / 1024
     log(f"已写出 {out_path}  ({sz:.0f} KB)")
+
+    # v276：定时全量批次才生成/提交上证 K 线；小样本自测不覆盖线上 sse.json
+    if not args.limit:
+        write_sse(os.path.join(os.path.dirname(out_path), "sse.json"))
+
+
+def write_sse(out_path):
+    """同批次生成上证全量日K（data/sse.json）。
+    用户实测：宽度 insum 已更新、对比页上证 K 线却停在昨天 —— 因为 sse.json
+    此前只由本地脚本手动生成，不在定时跑批里。这里与 breadth.json 同批提交，
+    且生成前校验“最新一根日期 == breadth 最新交易日”，两个文件不再出现半新半旧。"""
+    bars = B.fetch_kline("000001", lmt=10000, fqt=1, beg="19900101")
+    if not bars:
+        raise RuntimeError("上证全量日K抓取为空，拒绝写入 sse.json")
+    dates = [b["d"][:10] for b in bars]
+    last = dates[-1]
+    with open(out_path, encoding="utf-8") as f:
+        b_last = json.load(f)["dates"][-1]
+    if last != b_last:
+        raise RuntimeError(f"上证日K末日 {last} != breadth 交易日 {b_last}，拒绝半新半旧提交")
+    o = [round(b["o"], 2) for b in bars]
+    c = [round(b["c"], 2) for b in bars]
+    h = [round(b["h"], 2) for b in bars]
+    l = [round(b["l"], 2) for b in bars]
+    payload = {
+        "meta": {
+            "generated": bj_stamp(),
+            "generated_tz": "Asia/Shanghai (UTC+8)",
+            "source": "eastmoney 1.000001",
+            "to": last,
+            "from": dates[0],
+            "days": len(dates),
+        },
+        "dates": dates, "o": o, "h": h, "l": l, "c": c,
+    }
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+    log(f"已写出 {out_path}  上证 {dates[0]} → {last}  ({len(dates)} 根)")
     log(f"总耗时 {time.time()-t0:.0f}s")
 
 

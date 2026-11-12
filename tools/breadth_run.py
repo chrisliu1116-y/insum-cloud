@@ -46,6 +46,10 @@ DELTA_LMT = 80     # 增量模式：只取最近 80 根（RSI9/WR20 暖机后足
 WORKERS = 10       # 并发数
 FLUSH_EVERY = 200  # 每处理多少只落盘一次
 
+# 方案1（2026-11-12）：股票池 / 有效抓取数低于此值视为「东财整站风控」，
+# 不写假数据，仅标注 stale。与 .github/workflows/breadth.yml 提交闸门 u<5000 对齐。
+STALE_MIN_UNIVERSE = 5000
+
 # 本次实际抓取用的 lmt / beg（worker 里读取），由 main() 根据模式设置
 LMT_USE = LMT
 BEG = None
@@ -149,6 +153,53 @@ def worker(u):
         if new_add[i]:
             e[3] += 1
     return code, inc
+
+
+def stale_reason_of(uni, ok, agg):
+    """方案1 触发判据：东财全挂 / 股票池明显缩水。
+
+    返回原因字符串；空字符串表示正常、不触发。与 breadth.yml 提交闸门
+    u<5000 对齐：股票池或有效抓取数任一低于 5000 即视为本次跑批失败。
+    """
+    n = len(uni)
+    if n < STALE_MIN_UNIVERSE:
+        return f"股票池缩水 {n} < {STALE_MIN_UNIVERSE}（东财 clist/get 疑似风控）"
+    if ok < STALE_MIN_UNIVERSE:
+        return f"有效日K {ok} < {STALE_MIN_UNIVERSE}（东财 push2his 疑似全挂）"
+    if not agg:
+        return "聚合结果为空（无任何有效日K）"
+    return ""
+
+
+def mark_stale(out_path, reason):
+    """保留数据序列不变，仅在 meta 写 stale 标记。返回是否成功标注。
+
+    - trade_date 保留上次成功日（老文件可能只有 to / dates 末日，兜底取之）；
+    - stale_since 只在首次进入 stale 时记录（北京时间 ISO），不随每日失败跑批刷新；
+    - 原子写（tmp + os.replace），避免写坏既有 breadth.json。
+    无既有文件或数据序列缺失时返回 False，调用方据此「不写假数据」。
+    """
+    if not os.path.exists(out_path):
+        return False
+    try:
+        with open(out_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not (data.get("dates") and data.get("total")):
+            return False
+    except Exception:
+        return False
+    m = data.setdefault("meta", {})
+    td = m.get("trade_date") or m.get("to") or data["dates"][-1]
+    if not m.get("stale"):
+        m["stale_since"] = bj_now().isoformat()
+    m["stale"] = True
+    m["trade_date"] = td
+    m["stale_reason"] = reason
+    tmp = out_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, out_path)
+    return True
 
 
 def main():
@@ -280,6 +331,23 @@ def main():
 
     log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {time.time()-t0:.0f}s")
 
+    # ===== 方案1（2026-11-12）：失败不静默停更 =====
+    # 东财整站风控有两种表现：clist/get 拿不到全量股票池（uni 缩水），
+    # 或 push2his 日K 全挂（ok≈0）。任一成立都不写「假数据」覆盖已有 breadth.json，
+    # 只保留上次成功的数据序列，并在 meta 明确标注 stale / trade_date / stale_since。
+    # 正常路径（股票池>=5000 且 ok>=5000）判断为空，下面聚合/写入一字不改地继续。
+    # --limit 是主动缩小股票池的调试开关，跳过本护栏，避免污染线上文件 meta。
+    if not args.limit:
+        reason = stale_reason_of(uni, ok, agg)
+        if reason:
+            log(f"方案1 护栏触发：{reason}")
+            log("  不覆盖数据序列，仅标注 meta.stale；trade_date 保留上次成功日")
+            if mark_stale(out_path, reason):
+                log(f"  已保留上次成功 breadth.json 并写入 stale 标记：{out_path}")
+            else:
+                log("  无既有 breadth.json 可保留；不写假数据，本次不产出")
+            return
+
     # ---- 聚合 ----
     if old:
         # 增量合并：只把「晚于既有最后交易日」的新日子追加进去。
@@ -368,6 +436,10 @@ def main():
         "active": active,
         "sig": packed,
     }
+    # 方案1：正常成功时显式清除 stale 标记（out.meta 为全新 dict 本就不含；
+    # 显式 pop 防止将来改为复用 old.meta 时残留 stale 字段）。
+    for k in ("stale", "stale_since", "stale_reason"):
+        out["meta"].pop(k, None)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     sz = os.path.getsize(out_path) / 1024

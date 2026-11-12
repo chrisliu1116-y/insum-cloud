@@ -381,6 +381,22 @@ def main():
 EM_SPOT = "https://push2.eastmoney.com/api/qt/stock/get"
 SSE_SECID = "1.000001"          # 上证指数（沪市 1.）；写成 000001 会被判成深市平安银行
 
+# ---- 腾讯 fqkline 备用源（2026-11-12 实测）----
+# 仅当东财 push2his 返回空 / 异常时才回退；主路径成功时行为一字不改。
+# 实测：param=sh000001,day,,,<count>,qfq；count>=2400 起 data 返回空（[] 坑），
+#       2000 有效、1200 最稳；起止日期字段被服务端忽略，取不到 1990 起全量；
+#       qfq/hfq 对指数等价（指数不复权），不带复权参数时 data 为空；
+#       day[i]=[日期,开,收,高,低,成交量]，无成交额；连续 5 次 RTT 71~79ms、
+#       5/5 成功、Access-Control-Allow-Origin=*、无 403/429。
+TENCENT_FQKLINE = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
+TENCENT_MAX_COUNT = 1200        # 封顶：2400 起返回空，留足余量
+TENCENT_TIMEOUT = 10            # 单次超时上限（秒），不重试，避免拖慢跑批
+SSE_JSON = os.path.join(OUT_DIR, "sse.json")   # 已提交的全量历史底稿（checkout 后必存在）
+
+# 本次 fetch_index_bars() 实际命中的上游，供 write_sse() 写 meta.kline_source 审计。
+# 单线程跑批脚本；write_sse 用 globals().get 带默认值读取，测试 monkeypatch 场景不受影响。
+_SSE_KLINE_SOURCE = "eastmoney"
+
 
 def fetch_index_bars(lmt=10000, beg="19900101"):
     """上证指数全量日K（显式 secid = 1.000001）。
@@ -394,21 +410,100 @@ def fetch_index_bars(lmt=10000, beg="19900101"):
         "beg": beg, "fields1": "f1,f2,f3,f4,f5,f6",
         "fields2": "f51,f52,f53,f54,f55,f56,f57",
     }
-    d = B._get(B.EM_KLINE, params)
-    if not d or not d.get("data") or not d["data"].get("klines"):
-        return []
+    # 主路径：东财 push2his（成功时的解析与返回一字未改）
+    global _SSE_KLINE_SOURCE
+    try:
+        d = B._get(B.EM_KLINE, params)
+    except Exception:
+        d = None
     out = []
-    for line in d["data"]["klines"]:
-        p = line.split(",")
-        if len(p) < 7:
-            continue
-        try:
-            out.append({"d": p[0], "o": float(p[1]), "c": float(p[2]),
-                        "h": float(p[3]), "l": float(p[4]),
-                        "v": float(p[5]), "a": float(p[6])})
-        except Exception:
-            continue
-    return out
+    if d and d.get("data") and d["data"].get("klines"):
+        for line in d["data"]["klines"]:
+            p = line.split(",")
+            if len(p) < 7:
+                continue
+            try:
+                out.append({"d": p[0], "o": float(p[1]), "c": float(p[2]),
+                            "h": float(p[3]), "l": float(p[4]),
+                            "v": float(p[5]), "a": float(p[6])})
+            except Exception:
+                continue
+    if out:
+        _SSE_KLINE_SOURCE = "eastmoney"
+        return out
+
+    # 东财返回空 / 解析全失败 / 请求异常 → 才回退腾讯。主路径成功绝不走到这里。
+    bars = fetch_index_bars_fallback()
+    if bars:
+        _SSE_KLINE_SOURCE = "tencent-fqkline"
+        return bars
+    _SSE_KLINE_SOURCE = "eastmoney"
+    return []
+
+
+def fetch_index_bars_tencent(count=TENCENT_MAX_COUNT, timeout=TENCENT_TIMEOUT):
+    """腾讯 fqkline 备用源：返回最近若干根上证日K（升序），失败返回 []。
+
+    字段映射：腾讯 day[i] = [日期, 开, 收, 高, 低, 成交量(手)]
+      对应东财 f51..f57 = 日期, 开, 收, 高, 低, 成交量, 成交额。
+    腾讯无成交额字段，a 记 0（write_sse 只输出 o/h/l/c，不输出 v/a，不影响产物）。
+    """
+    count = max(1, min(int(count), TENCENT_MAX_COUNT))   # 封顶，规避 count 过大返回空
+    try:
+        r = B.SESSION.get(
+            TENCENT_FQKLINE,
+            params={"param": "sh000001,day,,,%d,qfq" % count},
+            timeout=timeout,
+        )
+        if r.status_code != 200:
+            return []
+        node = ((r.json().get("data") or {}).get("sh000001") or {})
+        arr = node.get("day") or node.get("qfqday") or []
+        out = []
+        for row in arr:
+            if not isinstance(row, (list, tuple)) or len(row) < 6:
+                continue
+            try:
+                out.append({"d": str(row[0])[:10], "o": float(row[1]), "c": float(row[2]),
+                            "h": float(row[3]), "l": float(row[4]),
+                            "v": float(row[5]), "a": 0.0})
+            except (ValueError, TypeError):
+                continue
+        return out
+    except Exception:
+        return []
+
+
+def _merge_tencent_history(tx_bars, sse_path=None):
+    """腾讯近端数据 + 已提交 sse.json 全量历史 → 完整 bars（起点 1990）。
+
+    腾讯只给最近约 1200 根，直接交给 write_sse 会触发「起点偏晚」护栏拒写。
+    sse.json 随仓库提交（breadth.yml checkout 后必存在），以它作历史底稿：
+    腾讯数据按日期覆盖同日根、追加新日根，保证 bars[0] 仍是 1990-12-19。
+    底稿缺失/损坏时返回纯腾讯序列：起点护栏会拒写，属「失败不静默降级」。
+    """
+    path = sse_path or SSE_JSON
+    try:
+        with open(path, encoding="utf-8") as f:
+            o = json.load(f)
+        dates, oo, hh, ll, cc = o["dates"], o["o"], o["h"], o["l"], o["c"]
+        hist = [{"d": dates[i], "o": oo[i], "c": cc[i], "h": hh[i], "l": ll[i],
+                 "v": 0.0, "a": 0.0} for i in range(len(dates))]
+    except Exception:
+        return tx_bars
+    by_date = {b["d"]: b for b in hist}
+    for b in tx_bars:
+        by_date[b["d"]] = b       # 覆盖同日根 / 追加新日根
+    return [by_date[d] for d in sorted(by_date)]
+
+
+def fetch_index_bars_fallback(count=TENCENT_MAX_COUNT, timeout=TENCENT_TIMEOUT,
+                              sse_path=None):
+    """东财失败时的完整回退：腾讯抓取 → 拼接已提交历史 → 返回全量 bars。"""
+    tx = fetch_index_bars_tencent(count, timeout)
+    if not tx:
+        return []
+    return _merge_tencent_history(tx, sse_path)
 
 
 def fetch_spot_bar_000001():
@@ -558,16 +653,22 @@ def write_sse(sse_path, breadth_path=None):
     c = [round(b["c"], 2) for b in bars]
     h = [round(b["h"], 2) for b in bars]
     l = [round(b["l"], 2) for b in bars]
+    # 日K上游来源（主路径 eastmoney / 回退 tencent-fqkline），便于审计。
+    # 不塞进 to_src：to_src 是「末根是否由收盘快照补齐」的既有语义，
+    # sse_is_valid() 幂等闸与 test_sse_snapshot.py 都依赖它，改动会破坏护栏。
+    kline_source = globals().get("_SSE_KLINE_SOURCE", "eastmoney")
     payload = {
         "meta": {
             "generated": bj_stamp(),
             "generated_tz": "Asia/Shanghai (UTC+8)",
-            "source": "eastmoney 1.000001",
+            "source": ("tencent fqkline sh000001" if kline_source == "tencent-fqkline"
+                       else "eastmoney 1.000001"),
             "to": last,
             "from": dates[0],
             "days": len(dates),
             # v277 数据来源可审计：kline = 日K接口；kline+snapshot = 末根由收盘快照补齐
             "to_src": src,
+            "kline_source": kline_source,
             **({"spot": spot_meta} if spot_meta else {}),
         },
         "dates": dates, "o": o, "h": h, "l": l, "c": c,

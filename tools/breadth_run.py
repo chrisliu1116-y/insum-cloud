@@ -210,6 +210,8 @@ def main():
     ap.add_argument("--incremental", action="store_true", help="增量模式：只抓最近 N 根，追加到既有数据后")
     ap.add_argument("--workers", type=int, default=WORKERS)
     ap.add_argument("--no-wait", action="store_true", help="不等待收盘数据就绪，直接跑")
+    ap.add_argument("--recheck", action="store_true",
+                    help="收盘后复核轮：即使今日数据已完整也强制重跑，覆盖当日行（清算/收盘修正）")
     ap.add_argument("--out", default="", help="输出路径（默认 breadth/data/breadth.json；云端跑批用）")
     args = ap.parse_args()
 
@@ -244,8 +246,12 @@ def main():
             log(f"增量模式：已有 {len(old['dates'])} 个交易日（{old['dates'][0]} → {old['dates'][-1]}），"
                 f"本次只抓最近 {DELTA_LMT} 根日K")
     # 幂等：多时间点兜底 cron 会触发多次。若现有数据已是「今天且完整」，
-    # 直接跳过，避免重复抓 5584 只 / 重复提交。（--fresh 或 --limit 调试不受影响）
-    if not args.fresh and not args.limit and os.path.exists(out_path):
+    # 直接跳过，避免重复抓 5584 只 / 重复提交。（--fresh / --recheck / --limit 不受影响）
+    # v291【recheck】15:30 之后的复核轮必须绕过幂等闸：盘后清算价会微调，
+    # 首次跑批（15:0x）拿到的收盘快照可能不是最终值，需要重抓覆盖当日行。
+    if args.recheck:
+        log("复核轮（--recheck）：忽略「今日已完整」幂等闸，强制重抓并覆盖当日行")
+    if not args.fresh and not args.recheck and not args.limit and os.path.exists(out_path):
         try:
             with open(out_path, "r", encoding="utf-8") as f:
                 old = json.load(f)
@@ -271,7 +277,7 @@ def main():
     os.makedirs(CACHE_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    st = None if (args.fresh or args.incremental or args.since) else load_state()
+    st = None if (args.fresh or args.recheck or args.incremental or args.since) else load_state()
     if st:
         uni = st["uni"]
         agg = st["agg"]

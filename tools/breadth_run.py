@@ -256,6 +256,16 @@ def main():
         if old:
             log(f"增量模式：已有 {len(old['dates'])} 个交易日（{old['dates'][0]} → {old['dates'][-1]}），"
                 f"本次只抓最近 {DELTA_LMT} 根日K")
+    # v293【防混拼】腾讯源绝不向非腾讯历史追加（东财 1990 起与腾讯口径不同）。
+    if not args.fresh and not args.limit and os.path.exists(out_path):
+        try:
+            _o = json.load(open(out_path, encoding="utf-8"))
+            _src_old = ((_o.get("meta") or {}).get("source") or "").lower()
+            if SRC == "tencent" and _src_old != "tencent":
+                log("护栏：现有 breadth.json 不是腾讯源，拒绝增量（避免两源混拼）。请先完成腾讯全量重建。")
+                return
+        except Exception:
+            pass
     # 幂等：多时间点兜底 cron 会触发多次。若现有数据已是「今天且完整」，
     # 直接跳过，避免重复抓 5584 只 / 重复提交。（--fresh / --recheck / --limit 不受影响）
     # v291【recheck】15:30 之后的复核轮必须绕过幂等闸：盘后清算价会微调，

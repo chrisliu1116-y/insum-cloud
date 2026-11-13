@@ -36,6 +36,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import breadth_lib as B  # noqa: E402
 
+# v292（2026-11-14）：数据源可切换。
+#   BREADTH_SOURCE=tencent（默认）：腾讯日K + 腾讯总市值，零东财请求；
+#   BREADTH_SOURCE=eastmoney：原东财链路（解封后切回，历史更全）。
+# 两种源共用同一套计算与合并逻辑；既有 breadth.json 的 1990 起历史不会被覆盖，
+# 新源只负责「晚于最后一根」的增量。
+SRC = os.environ.get("BREADTH_SOURCE", "tencent").strip().lower()
+if SRC == "tencent":
+    import tx_lib as P  # noqa: E402
+else:
+    P = B
+
 CACHE_DIR = os.path.join(ROOT, "tools", "breadth_cache")
 STATE = os.path.join(CACHE_DIR, "state.json")
 OUT_DIR = os.path.join(ROOT, "breadth", "data")
@@ -43,7 +54,7 @@ OUT = os.path.join(OUT_DIR, "breadth.json")
 
 LMT = 750          # 每只股票取多少根日K（约 3 年）
 DELTA_LMT = 80     # 增量模式：只取最近 80 根（RSI9/WR20 暖机后足够覆盖近 ~40 交易日）
-WORKERS = 10       # 并发数
+WORKERS = int(os.environ.get("BREADTH_WORKERS", "6"))  # 并发数（腾讯源实测>10易触发501）
 FLUSH_EVERY = 200  # 每处理多少只落盘一次
 
 # 方案1（2026-11-12）：股票池 / 有效抓取数低于此值视为「东财整站风控」，
@@ -121,7 +132,7 @@ def save_state(agg, done, uni, meta):
 def worker(u):
     """返回 (code, {date: [daycnt, total, willrm, newadd, active]} 或 None)"""
     code = u["code"]
-    bars = B.fetch_kline(code, lmt=LMT_USE, fqt=1, beg=BEG)
+    bars = P.fetch_kline(code, lmt=LMT_USE, fqt=1, beg=BEG)
     if not bars:
         return code, None
     # 总股本 = 总市值 / 当前不复权价。停牌无现价时用不复权收盘价倒推
@@ -130,7 +141,7 @@ def worker(u):
     if price > 0:
         shares = u["mktcap"] / price
     else:
-        raw = B.fetch_kline(code, lmt=1, fqt=0)
+        raw = P.fetch_kline(code, lmt=1, fqt=0)
         rawc = raw[-1]["c"] if raw else 0
         shares = (u["mktcap"] / rawc) if rawc > 0 else None
     if not shares or shares <= 0:
@@ -285,7 +296,7 @@ def main():
         log(f"续跑：股票池 {len(uni)}，已完成 {len(done)}")
     else:
         log("拉取股票池…")
-        uni = B.fetch_universe(verbose=True)
+        uni = P.fetch_universe(verbose=True)
         agg = {}
         done = set()
         log(f"股票池 {len(uni)} 只")
@@ -433,6 +444,7 @@ def main():
             "to": dates[-1],
             "lmt": LMT,
             "spec": "全部A股(含北交所) / fqt=1 / RSI9-WR10-WR20 / 总市值>100亿",
+            "source": SRC,
         },
         "dates": dates,
         "total": total,

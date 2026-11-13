@@ -116,6 +116,8 @@ jobs:
       - name: 跑批
         if: steps.probe.outputs.ready != 'false'
         env:
+          BREADTH_SOURCE: tencent
+          BREADTH_WORKERS: '6'
           LIMIT: ${{ inputs.limit }}
           NO_WAIT: ${{ inputs.no_wait }}
           SINCE: ${{ inputs.since }}

@@ -382,13 +382,13 @@ def main():
         new_dates = [d for d in sorted(agg.keys()) if d > last]
         log(f"新增交易日 {len(new_dates)} 个（> {last}）")
         if not new_dates:
-            # v276：宽度已是今日但没有 sse.json 时，也补齐上证 K 线；
-            # 避免今天“insum 已更新 / sse 缺失或旧”的半新半旧状态持续到收盘后。
-            if bj_today() == last:
-                sse_path = os.path.join(os.path.dirname(out_path), "sse.json")
-                if not sse_is_valid(sse_path, last):
-                    log("宽度已今日但 sse.json 缺失/旧，补齐上证日K")
-                    write_sse(sse_path)
+            # v341：只要 breadth 最后一根比 sse 新，就补齐上证 K 线。
+            # 旧逻辑只在 bj_today()==last 时补，周末/手动发布 breadth 后会留下
+            # 「宽度新 / 上证旧」的半新半旧状态（用户 11-14 实测）。
+            sse_path = os.path.join(os.path.dirname(out_path), "sse.json")
+            if not sse_is_valid(sse_path, last):
+                log(f"宽度末日 {last} 新于 sse，补齐上证日K")
+                write_sse(sse_path)
             else:
                 log("没有新交易日，数据保持不变，跳过写入")
             return

@@ -116,7 +116,7 @@ jobs:
       - name: 跑批
         if: steps.probe.outputs.ready != 'false'
         env:
-          BREADTH_SOURCE: eastmoney
+          BREADTH_SOURCE: tencent   # 东财验证通过后改回 eastmoney
           BREADTH_WORKERS: '6'
           LIMIT: ${{ inputs.limit }}
           NO_WAIT: ${{ inputs.no_wait }}

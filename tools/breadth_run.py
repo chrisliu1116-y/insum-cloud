@@ -35,6 +35,7 @@ def bj_stamp():
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import breadth_lib as B  # noqa: E402
+import trade_calendar as TC  # noqa: E402  v297 交易日判断
 
 # v292（2026-11-14）：数据源可切换。
 #   BREADTH_SOURCE=tencent（默认）：腾讯日K + 腾讯总市值，零东财请求；
@@ -97,6 +98,11 @@ def wait_ready():
     now = bj_now()
     today = now.strftime("%Y-%m-%d")
     hhmm = now.hour * 100 + now.minute
+    # v297：先用「工作日−法定节假日」判定今天该不该有数据。
+    # 非交易日按最近交易日跑（周末/节假日不产生新行，跑了也无害但不必要）。
+    if not TC.is_trade_day(today):
+        log(f"  {today} 不是交易日（周末/法定节假日），按最近交易日数据跑")
+        return True
     if now.weekday() >= 5:
         log(f"  今天是周末（{today} 北京时间），按最近交易日数据跑")
         return True
@@ -394,8 +400,16 @@ def main():
             if not sse_is_valid(sse_path, last):
                 log(f"宽度末日 {last} 新于 sse，补齐上证日K")
                 write_sse(sse_path)
-            else:
-                log("没有新交易日，数据保持不变，跳过写入")
+            # v297【交易日校验】今天该有数据却没拿到 → 明确失败退出，绝不静默成功。
+            # 旧逻辑在这里一律「数据保持不变，跳过写入」+ return 0，
+            # 于是「交易日但当天K线没落」会被当成成功：CF 的 todayPublished 看不到
+            # 新数据会继续重试，但工作流本身显示绿灯，没人知道到底跑没跑出来。
+            today_str = bj_today()
+            if TC.is_trade_day(today_str) and last < today_str:
+                log(f"错误：{today_str} 是交易日，但数据只到 {last}（当天未更新）。"
+                    f"本次不发布，退出码 3（让 CF 下一轮继续重试并暴露问题）。")
+                sys.exit(3)
+            log("没有新交易日，数据保持不变，跳过写入")
             return
         dates = old["dates"] + new_dates
         daycnt = old["daycnt"] + [agg[d][0] for d in new_dates]

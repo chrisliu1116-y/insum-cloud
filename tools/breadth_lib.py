@@ -10,6 +10,7 @@
   - 停牌：不平推，按自然交易日独立算，按日期 GroupBy 累加
 """
 import math
+import random
 import time
 import requests
 
@@ -28,6 +29,9 @@ SESSION.headers.update(UA)
 def _get(url, params, retries=3, timeout=15):
     for k in range(retries):
         try:
+            # v294：全市场 5584 只逐只取K线，单靠并发控制仍偏密。每请求前加
+            # 120~180ms 抖动，把峰值压到 ~4 并发 / 5~8 req/s，降低被东财限速概率。
+            time.sleep(random.uniform(0.12, 0.18))
             r = SESSION.get(url, params=params, timeout=timeout)
             if r.status_code == 200:
                 return r.json()

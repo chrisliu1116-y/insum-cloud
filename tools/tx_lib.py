@@ -99,6 +99,7 @@ def fetch_kline(code, lmt=750, fqt=1, beg=None):
     n = max(30, min(1200, int(lmt or 750)))
     for k in range(3):
         try:
+            time.sleep(random.uniform(0.12, 0.18))  # v294 抖动
             r = SESSION.get(KLINE, params={"param": f"{tc},day,,,{n},qfq"}, timeout=20)
             if r.status_code == 501:
                 time.sleep(3 + k * 3)

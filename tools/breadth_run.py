@@ -54,7 +54,7 @@ OUT = os.path.join(OUT_DIR, "breadth.json")
 
 LMT = 750          # 每只股票取多少根日K（约 3 年）
 DELTA_LMT = 80     # 增量模式：只取最近 80 根（RSI9/WR20 暖机后足够覆盖近 ~40 交易日）
-WORKERS = int(os.environ.get("BREADTH_WORKERS", "6"))  # 并发数（腾讯源实测>10易触发501）
+WORKERS = int(os.environ.get("BREADTH_WORKERS", "4"))  # 并发数（腾讯源实测>10易触发501）
 FLUSH_EVERY = 200  # 每处理多少只落盘一次
 
 # 方案1（2026-11-12）：股票池 / 有效抓取数低于此值视为「东财整站风控」，
@@ -263,6 +263,11 @@ def main():
             _src_old = ((_o.get("meta") or {}).get("source") or "").lower()
             if SRC == "tencent" and _src_old != "tencent":
                 log("护栏：现有 breadth.json 不是腾讯源，拒绝增量（避免两源混拼）。请先完成腾讯全量重建。")
+                return
+            # v294【双向护栏】东财增量也绝不能追加到腾讯历史上：两源历史长度/口径不同。
+            if SRC == "eastmoney" and _src_old == "tencent":
+                log("护栏：现有 breadth.json 是腾讯源，拒绝用东财增量追加（避免两源混拼）。"
+                    "切回东财请先把 breadth.json 换回东财历史（breadth/data/_archive_breadth_em_*.json）。")
                 return
         except Exception:
             pass

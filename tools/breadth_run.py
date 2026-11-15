@@ -67,6 +67,11 @@ LMT_USE = LMT
 BEG = None
 
 _lock = threading.Lock()
+# v361【连续失败熔断】11-15 本机取证：前 200 只全通，200~400 只之间失败率升到 30%。
+# 一旦连续 30 只拿不到日K，说明短时滑动窗口已经触顶，继续打只会加重风控。
+# 置位后已提交的 worker 直接返回（不再向 push2his 发请求），整批判 stale。
+_ABORT = threading.Event()
+MAX_CONSEC_BAD = 30
 
 
 def log(*a):
@@ -138,6 +143,8 @@ def save_state(agg, done, uni, meta):
 def worker(u):
     """返回 (code, {date: [daycnt, total, willrm, newadd, active]} 或 None)"""
     code = u["code"]
+    if _ABORT.is_set():          # v361：熔断后不再发任何东财 kline 请求
+        return code, None
     bars = P.fetch_kline(code, lmt=LMT_USE, fqt=1, beg=BEG)
     if not bars:
         return code, None
@@ -316,6 +323,14 @@ def main():
         done = set(st["done"])
         log(f"续跑：股票池 {len(uni)}，已完成 {len(done)}")
     else:
+        # v361【健康检查】1 个 clist 请求确认股票池完整，0 只/断连立刻停批。
+        # 只在 GHA runner 里执行，本机不会向东财发任何请求。
+        if not args.limit:
+            _probe = P.probe_universe()
+            log(f"clist 健康检查：total={_probe}（期望 >= 5000）")
+            if _probe < 5000:
+                log("健康检查未通过：东财 clist 疑似端点级限流，本次不跑批，退出码 3")
+                sys.exit(3)
         log("拉取股票池…")
         uni = P.fetch_universe(verbose=True)
         agg = {}
@@ -331,6 +346,7 @@ def main():
 
     ok = bad = 0
     cnt = 0
+    consec_bad = 0
     lock = threading.Lock()
 
     def flush(force=False):
@@ -346,14 +362,23 @@ def main():
             except Exception as e:
                 with _lock:
                     bad += 1
+                    consec_bad += 1
+                    if consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
+                        _ABORT.set()
+                        log(f"  !! 熔断：连续 {consec_bad} 只异常，停发新的 kline 请求")
                 continue
             with _lock:
                 cnt += 1
                 done.add(code)
                 if inc is None:
                     bad += 1
+                    consec_bad += 1
+                    if consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
+                        _ABORT.set()
+                        log(f"  !! 熔断：连续 {consec_bad} 只无有效日K，停发新的 kline 请求")
                 else:
                     ok += 1
+                    consec_bad = 0
                     for d, e in inc.items():
                         cur = agg.get(d)
                         if cur is None:
@@ -365,9 +390,17 @@ def main():
                     flush()
                     log(f"  进度 {cnt}/{len(todo)}  有效 {ok}  空/失败 {bad}  "
                         f"{time.time()-t0:.0f}s")
-    flush(force=True)
+    if not _ABORT.is_set():
+        flush(force=True)
 
     log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {time.time()-t0:.0f}s")
+    if _ABORT.is_set():
+        # 熔断后结果必然不完整：直接标 stale，绝不写残缺序列、也不落 state 供续跑
+        _reason = f"连续失败熔断（连续 {MAX_CONSEC_BAD} 只无有效日K，东财短时风控）"
+        log(f"方案1 护栏触发：{_reason}")
+        if mark_stale(out_path, _reason):
+            log(f"  已保留上次成功 breadth.json 并写入 stale 标记：{out_path}")
+        return
 
     # ===== 方案1（2026-11-12）：失败不静默停更 =====
     # 东财整站风控有两种表现：clist/get 拿不到全量股票池（uni 缩水），

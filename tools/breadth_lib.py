@@ -42,7 +42,13 @@ SESSION.headers.update(UA)
 HTTP_BACKEND = "curl_cffi/chrome120"
 
 
-def _get(url, params, retries=3, timeout=15):
+def _get(url, params, retries=1, timeout=15):
+    """v361【风控第一原则：失败不重试】
+    11-15 本机跑批取证：前 200 只全通，200~400 只之间失败率升到 30%，
+    而 `retries=3` 会把「一次失败」放大成 3 个请求 —— 越失败越打、越打越封，
+    形成正反馈。而 11-09 GHA / 11-10 本机三次成功样本都是「每只 1 请求、
+    全成功」，从来没有靠重试救回来过。故默认 retries=1：失败即弃，
+    交给上层护栏判 stale，绝不放大请求数。"""
     for k in range(retries):
         try:
             # v354：间隔下限由 120ms 提到 150ms（用户要求低并发 ≥150ms），
@@ -115,6 +121,21 @@ def _fetch_fs(fs, verbose=False):
     return out
 
 
+def probe_universe():
+    """v361【跑批前健康检查】只发 1 个 clist 请求，看 total 是否完整。
+    11-13 / 11-15 两次 GHA 失败都是「股票池 0 只」（clist 端点级限流）：
+    不先探一下就直接翻 56 页 + 5564 次 kline，全是无效请求还会加重风控。
+    本机零调用（这个函数只在 GHA runner 里跑），不会碰本机行情出口。"""
+    d = _get(EM_CLIST, {
+        "pn": 1, "pz": 1, "po": 1, "np": 1, "fltt": 2, "invt": 2,
+        "fid": "f12", "fs": FS_SH, "fields": "f12,f14",
+    }, retries=1)
+    try:
+        return int(((d or {}).get("data") or {}).get("total") or 0)
+    except Exception:
+        return 0
+
+
 def fetch_universe(verbose=False):
     """全部A股 = 沪深A + 北交所（用户口径：含 8/4/920 开头）。
     必须分两次查：把北交所的 fs 拼进同一条会被过滤掉（实测只回 5575、少 360+）。"""
@@ -138,7 +159,7 @@ def secid_of(code):
     return "0." + code
 
 
-def fetch_kline(code, lmt=320, fqt=1, retries=3, beg=None):
+def fetch_kline(code, lmt=320, fqt=1, retries=1, beg=None):
     """返回 bars: [{d,o,c,h,l,v,a}] 升序。fqt=1 前复权。
     beg 形如 '19901201'：东财原生支持，用于精确补历史（lmt 大于实际根数时自动取全量）。"""
     params = {

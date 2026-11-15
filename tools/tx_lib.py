@@ -18,15 +18,18 @@ import random
 import re
 import time
 
-import requests
+# v357：全仓统一 Chrome 指纹，禁用 Python 原生 requests / urllib
+from curl_cffi import requests
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIVERSE_FILE = os.path.join(ROOT, "tools", "tx_universe.json")
 UA = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "zh-CN,zh;q=0.9",
     "Referer": "https://gu.qq.com/",
 }
-SESSION = requests.Session()
+SESSION = requests.Session(impersonate="chrome120")
 SESSION.headers.update(UA)
 KLINE = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
 QUOTE = "https://qt.gtimg.cn/q="

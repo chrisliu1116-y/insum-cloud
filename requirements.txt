@@ -1,1 +1,2 @@
-requests>=2.31.0
+# v357：东财/腾讯跑批统一 Chrome TLS 指纹；不再依赖 Python 原生 requests
+curl_cffi>=0.17.0

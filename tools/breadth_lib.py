@@ -9,29 +9,45 @@
   - 市值：前复权Close × 当前总股本(f20/现价) / 1e8 > 100
   - 停牌：不平推，按自然交易日独立算，按日期 GroupBy 累加
 """
+import json
 import math
 import random
 import time
-import requests
+
+# v357【统一 Chrome TLS 指纹】（2026-11-15 用户要求）
+# GitHub 东财跑批全部走 curl_cffi，彻底不再使用 Python 原生 urllib / 普通
+# requests —— 后者的 JA3 指纹会被东财 WAF 识别后直接断连（RemoteDisconnected）。
+# Session 级指定 impersonate="chrome120" 后，该 Session 发出的每一个请求
+# 都带 Chrome 120 的 TLS/JA3/HTTP2 指纹，以及下面三个标准浏览器请求头。
+from curl_cffi import requests
 
 EM_CLIST = "https://push2.eastmoney.com/api/qt/clist/get"
 EM_KLINE = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
-UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+UA = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "zh-CN,zh;q=0.9",
+    "Referer": "https://quote.eastmoney.com/",
+}
 # 沪深A
 FS_SH = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
 # 北交所（必须单独查：和上面拼在同一条 fs 里会被过滤掉，实测合并只回 5575 只、少了 360+）
 FS_BJ = "m:0+t:81+s:2048"
 
-SESSION = requests.Session()
+# v357：唯一一条请求通道。GitHub Actions 与本机都走这里，不再有
+# 「GHA 用 requests」的回退分支，也不再有 curl.exe / urllib 兜底。
+# 缺库时直接 ImportError 明确失败，绝不静默退回被 WAF 拦的原生指纹。
+SESSION = requests.Session(impersonate="chrome120")
 SESSION.headers.update(UA)
+HTTP_BACKEND = "curl_cffi/chrome120"
 
 
 def _get(url, params, retries=3, timeout=15):
     for k in range(retries):
         try:
-            # v294：全市场 5584 只逐只取K线，单靠并发控制仍偏密。每请求前加
-            # 120~180ms 抖动，把峰值压到 ~4 并发 / 5~8 req/s，降低被东财限速概率。
-            time.sleep(random.uniform(0.12, 0.18))
+            # v354：间隔下限由 120ms 提到 150ms（用户要求低并发 ≥150ms），
+            # 峰值仍压在 ~4 并发 / 5~7 req/s，避免刚解封的 IP 再被风控。
+            time.sleep(random.uniform(0.15, 0.22))
             r = SESSION.get(url, params=params, timeout=timeout)
             if r.status_code == 200:
                 return r.json()

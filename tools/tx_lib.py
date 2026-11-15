@@ -31,6 +31,19 @@ UA = {
 }
 SESSION = requests.Session()
 SESSION.headers.update(UA)
+
+# ===================================================================
+# v361d【腾讯专属配置】按「腾讯之前的配置跑法」：
+#   · 无探针（PROBE_CHAIN=[]）—— 之前的腾讯跑批没有健康检查这一步；
+#   · 无熔断（CIRCUIT enabled=False）—— 名录里有 19 个历史无效代码
+#     （810011/492802/023403 等，台账 8032）永远取不到，东财那套
+#     「连续 30 只失败即停」会误伤；
+#   · kline 3 次重试带 501 退避（fetch_kline 内置）、<=6 并发 +
+#     60~120ms 抖动、普通 requests 不伪装（Chrome TLS 指纹只限东财）。
+# 东财在 breadth_lib.py 里改任何跑法都只动那份文件，与这里互不影响。
+# ===================================================================
+PROBE_CHAIN = []
+CIRCUIT = {'enabled': False, 'max_consec_bad': 0}
 KLINE = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
 QUOTE = "https://qt.gtimg.cn/q="
 

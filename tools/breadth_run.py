@@ -67,11 +67,16 @@ LMT_USE = LMT
 BEG = None
 
 _lock = threading.Lock()
-# v361【连续失败熔断】11-15 本机取证：前 200 只全通，200~400 只之间失败率升到 30%。
-# 一旦连续 30 只拿不到日K，说明短时滑动窗口已经触顶，继续打只会加重风控。
-# 置位后已提交的 worker 直接返回（不再向 push2his 发请求），整批判 stale。
+# v361d【熔断配置来自源模块】两个源各自带配置文件，主流程不写死任何源的条件：
+#   东财 breadth_lib.CIRCUIT = enabled（11-15 实测 200~400 只区间失败率 30%，
+#     连续 30 只无效即停发，避免重试正反馈把短时窗口打穿）；
+#   腾讯 tx_lib.CIRCUIT = disabled（按之前跑法，名录里 19 个历史无效代码
+#     会分散出现，东财那套熔断会误伤）。
+# 置位后已提交的 worker 直接返回（不再发请求），整批判 stale 不写残缺数据。
 _ABORT = threading.Event()
-MAX_CONSEC_BAD = 30
+_CIRCUIT = getattr(P, 'CIRCUIT', None) or {}
+_CIRCUIT_ON = bool(_CIRCUIT.get('enabled'))
+_CIRCUIT_MAX = int(_CIRCUIT.get('max_consec_bad') or 0)
 
 
 def log(*a):
@@ -325,20 +330,16 @@ def main():
     else:
         # v361【健康检查】1 个 clist 请求确认股票池完整，0 只/断连立刻停批。
         # 只在 GHA runner 里执行，本机不会向东财发任何请求。
-        if not args.limit and SRC == 'eastmoney':
-            # v361c：probe_universe / probe_kline 是东财端点专属，
-            # 腾讯 tx_lib 没有这两个函数，切源后必须跳过否则直接 AttributeError。
-            _probe = P.probe_universe()
-            log(f"clist 健康检查：total={_probe}（期望 >= 5000）")
-            if _probe < 5000:
-                log("健康检查未通过：东财 clist 疑似端点级限流，本次不跑批，退出码 3")
-                sys.exit(3)
-            # v361b：clist 通 ≠ kline 通（两端点独立风控）。再探 1 根日K，
-            # 不通就在 2 个请求内退出，绝不浪费整批 5584 次。
-            _kbars = P.probe_kline()
-            log(f"kline 健康检查：600519 返回 {_kbars} 根（期望 >= 1）")
-            if _kbars < 1:
-                log("kline 端点疑似被限流，本次不跑批，退出码 3")
+        # v361d【源专属探针链】探什么、阈值多少，由源模块自己的配置决定：
+        #   东财 breadth_lib.PROBE_CHAIN = [clist>=5000, kline>=1]（2 请求止损）；
+        #   腾讯 tx_lib.PROBE_CHAIN = []（之前的跑法没有探针，保持原样）。
+        for _nm, _fn, _min in (getattr(P, 'PROBE_CHAIN', None) or []):
+            if args.limit:
+                break
+            _v = _fn()
+            log(f"{_nm} 健康检查：{_v}（期望 >= {_min}）")
+            if _v < _min:
+                log(f"{_nm} 未通过：疑似端点级限流，本次不跑批，退出码 3")
                 sys.exit(3)
         log("拉取股票池…")
         uni = P.fetch_universe(verbose=True)
@@ -372,7 +373,7 @@ def main():
                 with _lock:
                     bad += 1
                     consec_bad += 1
-                    if SRC == 'eastmoney' and consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
+                    if _CIRCUIT_ON and consec_bad >= _CIRCUIT_MAX and not _ABORT.is_set():
                         _ABORT.set()
                         log(f"  !! 熔断：连续 {consec_bad} 只异常，停发新的 kline 请求")
                 continue
@@ -382,7 +383,7 @@ def main():
                 if inc is None:
                     bad += 1
                     consec_bad += 1
-                    if SRC == 'eastmoney' and consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
+                    if _CIRCUIT_ON and consec_bad >= _CIRCUIT_MAX and not _ABORT.is_set():
                         _ABORT.set()
                         log(f"  !! 熔断：连续 {consec_bad} 只无有效日K，停发新的 kline 请求")
                 else:
@@ -405,7 +406,7 @@ def main():
     log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {time.time()-t0:.0f}s")
     if _ABORT.is_set():
         # 熔断后结果必然不完整：直接标 stale，绝不写残缺序列、也不落 state 供续跑
-        _reason = f"连续失败熔断（连续 {MAX_CONSEC_BAD} 只无有效日K，东财短时风控）"
+        _reason = f"连续失败熔断（连续 {_CIRCUIT_MAX} 只无有效日K，东财短时风控）"
         log(f"方案1 护栏触发：{_reason}")
         if mark_stale(out_path, _reason):
             log(f"  已保留上次成功 breadth.json 并写入 stale 标记：{out_path}")

@@ -331,6 +331,13 @@ def main():
             if _probe < 5000:
                 log("健康检查未通过：东财 clist 疑似端点级限流，本次不跑批，退出码 3")
                 sys.exit(3)
+            # v361b：clist 通 ≠ kline 通（两端点独立风控）。再探 1 根日K，
+            # 不通就在 2 个请求内退出，绝不浪费整批 5584 次。
+            _kbars = P.probe_kline()
+            log(f"kline 健康检查：600519 返回 {_kbars} 根（期望 >= 1）")
+            if _kbars < 1:
+                log("kline 端点疑似被限流，本次不跑批，退出码 3")
+                sys.exit(3)
         log("拉取股票池…")
         uni = P.fetch_universe(verbose=True)
         agg = {}

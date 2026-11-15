@@ -136,6 +136,22 @@ def probe_universe():
         return 0
 
 
+def probe_kline(code="600519"):
+    """v361b【kline 端点探针】只发 1 个 push2his 请求（lmt=1）。
+    11-15 首次实测：clist pz=1 健康检查通过（total=5564），但 kline 前 142 只
+    有效后连续 30 只失败触发熔断 —— 说明 clist 与 kline 是**独立的端点风控**。
+    先探 1 根，能省掉整批无效请求：不通就在 2 个请求内退出。"""
+    d = _get(EM_KLINE, {
+        "secid": secid_of(code), "klt": 101, "fqt": 1, "lmt": 1,
+        "end": "20500101", "fields1": "f1,f2,f3",
+        "fields2": "f51,f52,f53,f54,f55,f56,f57",
+    }, retries=1)
+    try:
+        return len(((d or {}).get("data") or {}).get("klines") or [])
+    except Exception:
+        return 0
+
+
 def fetch_universe(verbose=False):
     """全部A股 = 沪深A + 北交所（用户口径：含 8/4/920 开头）。
     必须分两次查：把北交所的 fs 拼进同一条会被过滤掉（实测只回 5575、少 360+）。"""

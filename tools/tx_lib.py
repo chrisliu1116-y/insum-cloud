@@ -18,18 +18,18 @@ import random
 import re
 import time
 
-# v357：全仓统一 Chrome 指纹，禁用 Python 原生 requests / urllib
-from curl_cffi import requests
+# v361c（用户 2026-11-15）：Chrome TLS 指纹伪装**只限东财**。
+# 腾讯源恢复 v354 之前的普通 requests：腾讯 501 是并发/频率反爬，不是 TLS 指纹，
+# 按「腾讯之前的配置跑法」跑即可（<=6 并发 + 60~120ms 抖动，见 fetch_kline）。
+import requests
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNIVERSE_FILE = os.path.join(ROOT, "tools", "tx_universe.json")
 UA = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept-Language": "zh-CN,zh;q=0.9",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Referer": "https://gu.qq.com/",
 }
-SESSION = requests.Session(impersonate="chrome120")
+SESSION = requests.Session()
 SESSION.headers.update(UA)
 KLINE = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
 QUOTE = "https://qt.gtimg.cn/q="

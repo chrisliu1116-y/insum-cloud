@@ -325,7 +325,9 @@ def main():
     else:
         # v361【健康检查】1 个 clist 请求确认股票池完整，0 只/断连立刻停批。
         # 只在 GHA runner 里执行，本机不会向东财发任何请求。
-        if not args.limit:
+        if not args.limit and SRC == 'eastmoney':
+            # v361c：probe_universe / probe_kline 是东财端点专属，
+            # 腾讯 tx_lib 没有这两个函数，切源后必须跳过否则直接 AttributeError。
             _probe = P.probe_universe()
             log(f"clist 健康检查：total={_probe}（期望 >= 5000）")
             if _probe < 5000:
@@ -370,7 +372,7 @@ def main():
                 with _lock:
                     bad += 1
                     consec_bad += 1
-                    if consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
+                    if SRC == 'eastmoney' and consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
                         _ABORT.set()
                         log(f"  !! 熔断：连续 {consec_bad} 只异常，停发新的 kline 请求")
                 continue
@@ -380,7 +382,7 @@ def main():
                 if inc is None:
                     bad += 1
                     consec_bad += 1
-                    if consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
+                    if SRC == 'eastmoney' and consec_bad >= MAX_CONSEC_BAD and not _ABORT.is_set():
                         _ABORT.set()
                         log(f"  !! 熔断：连续 {consec_bad} 只无有效日K，停发新的 kline 请求")
                 else:

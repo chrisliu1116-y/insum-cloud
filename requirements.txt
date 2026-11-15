@@ -1,2 +1,3 @@
-# v357：东财/腾讯跑批统一 Chrome TLS 指纹；不再依赖 Python 原生 requests
+# v361c：伪装只限东财（curl_cffi/chrome120）；腾讯源用普通 requests，不伪装
 curl_cffi>=0.17.0
+requests>=2.31.0

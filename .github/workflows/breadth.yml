@@ -46,6 +46,10 @@ on:
         description: '修复末日行：保留全部历史，用本次重算值覆盖最后一根（坏数据修复用）'
         required: false
         default: 'false'
+      source:
+        description: '数据源：eastmoney=东财原配置(4并发/无令牌桶)，留空=tencent(默认32并发+140桶)'
+        required: false
+        default: ''
 
 permissions:
   contents: write                # 需要把 JSON 提交回仓库
@@ -120,12 +124,13 @@ jobs:
       - name: 跑批
         if: steps.probe.outputs.ready != 'false'
         env:
-          BREADTH_SOURCE: tencent
-          # v386b：限速与并发解耦——tx_lib 全局令牌桶把 kline 硬钉在 <=140 req/s
-          # （11-14 本机 5784/38s≈152 触发 501，140 留 ~7% 余量），并发只负责喂饱桶。
-          # 32 并发：单请求 ~0.13s → 需 ~18 在飞；留余量给 501 退避挂起的 worker。
-          BREADTH_WORKERS: '32'
-          BREADTH_RATE: '140'          # 令牌桶速率上限 req/s；501 出现自动 ×0.8 降速
+          # v386f：支持按源选配置。inputs.source=eastmoney 时用东财原样配置
+          # （4 并发 + 120~220ms 抖动 + retries1 + 80根增量，一次连续跑完，
+          #  这是 11-09/11-13 GHA 成功那套），不走腾讯令牌桶。
+          # 默认（含 CF 日常轮）仍 tencent + 32 并发 + 140 令牌桶，完全不变。
+          BREADTH_SOURCE: ${{ inputs.source || 'tencent' }}
+          BREADTH_WORKERS: ${{ inputs.source == 'eastmoney' && '4' || '32' }}
+          BREADTH_RATE: ${{ inputs.source == 'eastmoney' && '0' || '140' }}  # 东财0=禁用令牌桶(其库不读此值，仅为语义清晰)
           BREADTH_MAX_RUN_SEC: '900'   # watchdog 总时长硬闸（15min），杜绝无限跑
           BREADTH_STALL_SEC: '120'     # 进度 120s 无增长即急停
           BREADTH_MAX_501: '5'         # 501 累计 5 次即确认风控、急停

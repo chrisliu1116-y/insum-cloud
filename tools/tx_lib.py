@@ -159,7 +159,14 @@ def fetch_universe(verbose=False):
                     except ValueError:
                         continue
                     if price > 0:
-                        quotes[code] = (price, cap)
+                        # v386d【致命单位 bug】qt 字段45是「总市值·亿元」，但下游
+                        # breadth_run.worker 与东财共用同一公式：
+                        #   shares = mktcap / price;  mv = close * shares / 1e8 (>100亿)
+                        # 东财 f20 是「元」，直接除得真股本；腾讯若也传亿元，
+                        # shares 会小 1e8 倍 → mv≈0 → 全市场被过滤 → 四指标全 0
+                        # （11-16 首次 GHA 腾讯增量实测复现：active=5572 但 total=0）。
+                        # 这里 ×1e8 统一成元口径，与东财 f20 完全一致。
+                        quotes[code] = (price, cap * 1e8)
                 break
             except Exception:
                 time.sleep(0.5 * (k + 1))

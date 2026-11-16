@@ -380,6 +380,9 @@ def main():
             with _lock:
                 cnt += 1
                 done.add(code)
+                # v385c：进度日志（实时观察跑批节奏）
+                if cnt % 500 == 0:
+                    log(f"  进度 {cnt}/{len(todo)} · bad={bad}")
                 if inc is None:
                     bad += 1
                     consec_bad += 1

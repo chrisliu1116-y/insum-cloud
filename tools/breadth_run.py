@@ -358,6 +358,9 @@ def main():
     cnt = 0
     consec_bad = 0
     lock = threading.Lock()
+    # v386c：速率计时从「kline 循环开始」算，不把股票池拉取(本轮实测 31s)算进去。
+    # 否则 5765 请求 / 78s = 74 req/s 会误导成「没喂饱 140」，实际 kline 47s/5765 ≈ 123 req/s。
+    t_fetch = time.time()
 
     # ===== v386b 全程监控 + 自动急停 =====
     # 用户要求：跑批过程中可全程监控、发现卡住/风控能及时停，绝不允许无限期跑下去。
@@ -429,7 +432,7 @@ def main():
                 # req/s 用令牌桶发出的真实请求数 / 已耗时（不是成功的只数），
                 # 这样能直接看出是否贴近 140 上限、是否被 adaptive 降速。
                 if cnt % 500 == 0:
-                    el = time.time() - t0
+                    el = time.time() - t_fetch
                     if _has_bucket:
                         tot, n501, rate = P.BUCKET.stats()
                         rate_line = (f" · 已发 {tot} 请求 / 实测 {tot/el:.0f} req/s"
@@ -460,7 +463,7 @@ def main():
     if not _ABORT.is_set():
         flush(force=True)
 
-    el = time.time() - t0
+    el = time.time() - t_fetch
     rate_line = ""
     if _has_bucket:
         tot, n501, rate = P.BUCKET.stats()

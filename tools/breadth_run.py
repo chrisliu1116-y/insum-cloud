@@ -359,10 +359,53 @@ def main():
     consec_bad = 0
     lock = threading.Lock()
 
+    # ===== v386b 全程监控 + 自动急停 =====
+    # 用户要求：跑批过程中可全程监控、发现卡住/风控能及时停，绝不允许无限期跑下去。
+    # 三道自动急停（任一命中即置位 _ABORT + P.request_stop()，worker 立即停发请求）：
+    #   ① 卡住：progress 计数 N 秒无增长（默认 120s）→ 无论卡在哪个请求都止损；
+    #   ② 501 计数：令牌桶累计 501 >= 阈值（默认 5）→ 确认触发腾讯反爬，立刻停；
+    #   ③ 总时长：超过 MAX_RUN_SEC（默认 900s=15min）→ 兜底硬闸，绝不跑两小时。
+    # 所有阈值可用环境变量覆盖；_watch_reason 供退出日志写明命中哪一条。
+    MAX_RUN_SEC = int(os.environ.get("BREADTH_MAX_RUN_SEC", "900"))
+    STALL_SEC = int(os.environ.get("BREADTH_STALL_SEC", "120"))
+    MAX_501 = int(os.environ.get("BREADTH_MAX_501", "5"))
+    _watch_reason = {"v": ""}
+    _snap = {"cnt": 0, "t": time.time()}       # watchdog 读的最新进度快照
+    _has_bucket = hasattr(P, "BUCKET")
+
+    def watchdog():
+        while not _ABORT.is_set():
+            time.sleep(5)
+            now = time.time()
+            elapsed = now - t0
+            with _lock:
+                c = _snap["cnt"]
+                last_t = _snap["t"]
+            stall = now - last_t
+            why = ""
+            if elapsed > MAX_RUN_SEC:
+                why = f"超过总时长上限 {MAX_RUN_SEC}s（已跑 {elapsed:.0f}s）"
+            elif _has_bucket:
+                _tot, n501, _rate = P.BUCKET.stats()
+                if n501 >= MAX_501:
+                    why = f"501 反爬累计 {n501} >= {MAX_501}，确认触发风控"
+            if not why and c > 0 and stall > STALL_SEC:
+                why = f"卡住：{STALL_SEC}s 内进度无增长（停在 {c}/{len(todo)}）"
+            if why:
+                _watch_reason["v"] = why
+                _ABORT.set()
+                if hasattr(P, "request_stop"):
+                    P.request_stop()
+                log(f"  !! WATCHDOG 急停：{why}")
+                return
+
     def flush(force=False):
         nonlocal cnt
         if force or cnt % FLUSH_EVERY == 0:
             save_state(agg, done, uni, {"lmt": LMT, "ts": int(time.time())})
+
+    wd = threading.Thread(target=watchdog, daemon=True, name="breadth-watchdog")
+    wd.start()
 
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
         futs = [ex.submit(worker, u) for u in todo]
@@ -380,9 +423,22 @@ def main():
             with _lock:
                 cnt += 1
                 done.add(code)
-                # v385c：进度日志（实时观察跑批节奏）
+                _snap["cnt"] = cnt
+                _snap["t"] = time.time()
+                # v386b：每 500 只打一行——进度 / 有效 / 失败 / 实时速率 / 501 / 已耗时。
+                # req/s 用令牌桶发出的真实请求数 / 已耗时（不是成功的只数），
+                # 这样能直接看出是否贴近 140 上限、是否被 adaptive 降速。
                 if cnt % 500 == 0:
-                    log(f"  进度 {cnt}/{len(todo)} · bad={bad}")
+                    el = time.time() - t0
+                    if _has_bucket:
+                        tot, n501, rate = P.BUCKET.stats()
+                        rate_line = (f" · 已发 {tot} 请求 / 实测 {tot/el:.0f} req/s"
+                                     f" · 桶上限 {rate:.0f} · 501={n501}")
+                    else:
+                        rate_line = ""
+                    eta = f" · ETA {el/cnt*(len(todo)-cnt):.0f}s" if cnt else ""
+                    log(f"  进度 {cnt}/{len(todo)} · 有效 {ok} · 失败 {bad}"
+                        f"{rate_line}{eta} · 已跑 {el:.0f}s")
                 if inc is None:
                     bad += 1
                     consec_bad += 1
@@ -401,15 +457,19 @@ def main():
                                 cur[k] += e[k]
                 if cnt % FLUSH_EVERY == 0:
                     flush()
-                    log(f"  进度 {cnt}/{len(todo)}  有效 {ok}  空/失败 {bad}  "
-                        f"{time.time()-t0:.0f}s")
     if not _ABORT.is_set():
         flush(force=True)
 
-    log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {time.time()-t0:.0f}s")
+    el = time.time() - t0
+    rate_line = ""
+    if _has_bucket:
+        tot, n501, rate = P.BUCKET.stats()
+        rate_line = f" · 已发 {tot} 请求 / 平均 {tot/el:.0f} req/s · 终速 {rate:.0f} · 501={n501}"
+    log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {el:.0f}s{rate_line}")
     if _ABORT.is_set():
-        # 熔断后结果必然不完整：直接标 stale，绝不写残缺序列、也不落 state 供续跑
-        _reason = f"连续失败熔断（连续 {_CIRCUIT_MAX} 只无有效日K，东财短时风控）"
+        # 熔断/急停后结果必然不完整：直接标 stale，绝不写残缺序列、也不落 state 供续跑
+        _reason = (_watch_reason["v"] or
+                   f"连续失败熔断（连续 {_CIRCUIT_MAX} 只无有效日K，短时风控）")
         log(f"方案1 护栏触发：{_reason}")
         if mark_stale(out_path, _reason):
             log(f"  已保留上次成功 breadth.json 并写入 stale 标记：{out_path}")

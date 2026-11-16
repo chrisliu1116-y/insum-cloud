@@ -16,6 +16,7 @@ import json
 import os
 import random
 import re
+import threading
 import time
 
 # v361c（用户 2026-11-15）：Chrome TLS 指纹伪装**只限东财**。
@@ -31,6 +32,72 @@ UA = {
 }
 SESSION = requests.Session()
 SESSION.headers.update(UA)
+
+# ===================================================================
+# v386b（2026-11-16）全局令牌桶限速：把 kline 请求速率**硬钉在 <= BREADTH_RATE
+# req/s**，与并发数/单请求耗时解耦。用户口径「卡 140 上限、尽可能快」：
+#   11-14 本机 5784/38s ≈ 152 req/s 触发 501 → 140 是留 ~7% 余量的上限。
+# 令牌桶保证任意滑动窗口内请求数不超上限；并发只负责「喂饱桶」，不再是风险源。
+# 501 自适应：每出现一次 501，速率 ×0.8（下限 60），把「被限流」转成自动降速；
+# 主流程 watchdog 计数达阈值即急停（见 breadth_run.py）。
+# ===================================================================
+RATE = max(10.0, float(os.environ.get("BREADTH_RATE", "140")))
+_STOP = threading.Event()          # 急停信号：watchdog 置位后 acquire() 立即返回 False
+
+
+class _TokenBucket:
+    def __init__(self, rate):
+        self.lock = threading.Lock()
+        self.rate = float(rate)
+        self.min_rate = 60.0
+        self.capacity = max(10.0, float(rate) / 2)   # 0.5s 突发容量，避免首帧脉冲
+        self.tokens = self.capacity
+        self.last = time.monotonic()
+        self.total = 0             # 累计 acquire 成功数（含重试，= 真实发出的请求数）
+        self.resp501 = 0           # 累计 501 次数
+
+    def acquire(self):
+        """阻塞直到拿到 1 个令牌；返回 False 表示已急停（不再发请求）。"""
+        while True:
+            if _STOP.is_set():
+                return False
+            with self.lock:
+                now = time.monotonic()
+                self.tokens = min(self.capacity,
+                                  self.tokens + (now - self.last) * self.rate)
+                self.last = now
+                if self.tokens >= 1.0:
+                    self.tokens -= 1.0
+                    self.total += 1
+                    return True
+                need = (1.0 - self.tokens) / self.rate
+            time.sleep(min(need, 0.05))   # 锁外睡，避免占锁
+
+    def note501(self):
+        with self.lock:
+            self.resp501 += 1
+            old = self.rate
+            self.rate = max(self.min_rate, self.rate * 0.8)
+            print(f"[tx][501] 反爬 {self.resp501} 次，速率 {old:.0f}→{self.rate:.0f} req/s",
+                  flush=True)
+
+    def stats(self):
+        with self.lock:
+            return self.total, self.resp501, self.rate
+
+    def reset_stop(self):
+        _STOP.clear()
+
+
+BUCKET = _TokenBucket(RATE)
+
+
+def request_stop():
+    _STOP.set()
+
+
+def is_stopped():
+    return _STOP.is_set()
 
 # ===================================================================
 # v361d【腾讯专属配置】按「腾讯之前的配置跑法」：
@@ -114,11 +181,16 @@ def fetch_kline(code, lmt=750, fqt=1, beg=None):
         return []
     n = max(30, min(1200, int(lmt or 750)))
     for k in range(3):
+        # v386b：全局令牌桶统一控速，取代旧的每 worker 固定 sleep（0.12~0.18 +
+        # 0.05~0.12）——那两个固定 sleep 让 20 并发实际只有 ~50 req/s，喂不饱 140 的桶。
+        # 急停（_STOP）时 acquire 立即返回 False，worker 不再发任何请求。
+        if not BUCKET.acquire():
+            return []
         try:
-            time.sleep(random.uniform(0.12, 0.18))  # v294 抖动
             r = SESSION.get(KLINE, params={"param": f"{tc},day,,,{n},qfq"}, timeout=20)
             if r.status_code == 501:
-                time.sleep(3 + k * 3)
+                BUCKET.note501()          # 计数 + 自适应降速 ×0.8
+                time.sleep(3 + k * 3)     # 501 退避保留（遇限流时拉长间隔）
                 continue
             d = r.json()
             box = (d.get("data") or {}).get(tc) or {}
@@ -135,7 +207,5 @@ def fetch_kline(code, lmt=750, fqt=1, beg=None):
             if bars:
                 return bars
         except Exception:
-            time.sleep(1.0 * (k + 1))
-        finally:
-            _sleep()
+            time.sleep(0.5 * (k + 1))
     return []

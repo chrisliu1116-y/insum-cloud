@@ -441,7 +441,9 @@ def main():
                         rate_line = (f" · 已发 {tot} 请求 / 实测 {tot/el:.0f} req/s"
                                      f" · 桶上限 {rate:.0f} · 501={n501}")
                     else:
-                        rate_line = ""
+                        # v386g：东财源无令牌桶，但同样打实测速率——慢速诊断要看
+                        # 「每500只耗时 + req/s」才能区分「并发不足」还是「端点限流」。
+                        rate_line = f" · 实测 {cnt/el:.0f} req/s"
                     eta = f" · ETA {el/cnt*(len(todo)-cnt):.0f}s" if cnt else ""
                     log(f"  进度 {cnt}/{len(todo)} · 有效 {ok} · 失败 {bad}"
                         f"{rate_line}{eta} · 已跑 {el:.0f}s")
@@ -471,6 +473,9 @@ def main():
     if _has_bucket:
         tot, n501, rate = P.BUCKET.stats()
         rate_line = f" · 已发 {tot} 请求 / 平均 {tot/el:.0f} req/s · 终速 {rate:.0f} · 501={n501}"
+    else:
+        # v386g：东财源同样输出平均速率，供周末探测的耗时分析脚本判定
+        rate_line = f" · 平均 {ok/el:.0f} req/s" if el > 0 else ""
     log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {el:.0f}s{rate_line}")
     if _ABORT.is_set():
         # 熔断/急停后结果必然不完整：直接标 stale，绝不写残缺序列、也不落 state 供续跑

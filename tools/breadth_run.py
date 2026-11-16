@@ -241,6 +241,8 @@ def main():
     ap.add_argument("--no-wait", action="store_true", help="不等待收盘数据就绪，直接跑")
     ap.add_argument("--recheck", action="store_true",
                     help="收盘后复核轮：即使今日数据已完整也强制重跑，覆盖当日行（清算/收盘修正）")
+    ap.add_argument("--fix-last", action="store_true",
+                    help="修复末日行：保留全部历史，用本次重算的末日值覆盖最后一根（坏数据修复用，配合 --incremental）")
     ap.add_argument("--out", default="", help="输出路径（默认 breadth/data/breadth.json；云端跑批用）")
     args = ap.parse_args()
 
@@ -295,7 +297,8 @@ def main():
     # 首次跑批（15:0x）拿到的收盘快照可能不是最终值，需要重抓覆盖当日行。
     if args.recheck:
         log("复核轮（--recheck）：忽略「今日已完整」幂等闸，强制重抓并覆盖当日行")
-    if not args.fresh and not args.recheck and not args.limit and os.path.exists(out_path):
+    if (not args.fresh and not args.recheck and not args.fix_last and not args.limit
+            and os.path.exists(out_path)):
         try:
             with open(out_path, "r", encoding="utf-8") as f:
                 old = json.load(f)
@@ -501,7 +504,25 @@ def main():
         last = old["dates"][-1]
         new_dates = [d for d in sorted(agg.keys()) if d > last]
         log(f"新增交易日 {len(new_dates)} 个（> {last}）")
-        if not new_dates:
+        if args.fix_last:
+            # v386e【修复末日行】保留全部历史，用本次重算的末日值覆盖最后一根。
+            # 用于修复「有数据但四指标全 0」这类坏数据：历史一字不改，只换末日行。
+            if last in agg:
+                old["daycnt"][-1], old["total"][-1] = agg[last][0], agg[last][1]
+                old["willrm"][-1], old["newadd"][-1] = agg[last][2], agg[last][3]
+                old["active"][-1] = agg[last][4]
+                log(f"修复末日行 {last}：daycnt={agg[last][0]} total={agg[last][1]} "
+                    f"willrm={agg[last][2]} newadd={agg[last][3]} active={agg[last][4]}")
+            else:
+                log(f"修复失败：本次 agg 里没有末日 {last} 的数据（可能日K未覆盖当日）")
+                sys.exit(3)
+            dates, daycnt, total = old["dates"], old["daycnt"], old["total"]
+            willrm, newadd, active = old["willrm"], old["newadd"], old["active"]
+            # 修复模式也要重写 sse（末日那根快照不受影响，但保持一致）
+            sse_path = os.path.join(os.path.dirname(out_path), "sse.json")
+            if not sse_is_valid(sse_path, last):
+                write_sse(sse_path)
+        elif not new_dates:
             # v341：只要 breadth 最后一根比 sse 新，就补齐上证 K 线。
             # 旧逻辑只在 bj_today()==last 时补，周末/手动发布 breadth 后会留下
             # 「宽度新 / 上证旧」的半新半旧状态（用户 11-14 实测）。
@@ -520,12 +541,13 @@ def main():
                 sys.exit(3)
             log("没有新交易日，数据保持不变，跳过写入")
             return
-        dates = old["dates"] + new_dates
-        daycnt = old["daycnt"] + [agg[d][0] for d in new_dates]
-        total = old["total"] + [agg[d][1] for d in new_dates]
-        willrm = old["willrm"] + [agg[d][2] for d in new_dates]
-        newadd = old["newadd"] + [agg[d][3] for d in new_dates]
-        active = old["active"] + [agg[d][4] for d in new_dates]
+        else:
+            dates = old["dates"] + new_dates
+            daycnt = old["daycnt"] + [agg[d][0] for d in new_dates]
+            total = old["total"] + [agg[d][1] for d in new_dates]
+            willrm = old["willrm"] + [agg[d][2] for d in new_dates]
+            newadd = old["newadd"] + [agg[d][3] for d in new_dates]
+            active = old["active"] + [agg[d][4] for d in new_dates]
     else:
         dates = sorted(agg.keys())
         if not dates:

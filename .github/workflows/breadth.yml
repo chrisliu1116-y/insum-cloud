@@ -61,7 +61,11 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # v386h【平台级硬闸】用户口径「最多忍受30分钟，30分钟内一定要停」。
+    # 三层超时防无限跑：① 本行 GitHub 平台级 25min 强杀（最硬兜底，连脚本卡死也杀）；
+    # ② breadth_run watchdog 15min（脚本内停，能写明原因+标 stale+留过程日志）；
+    # ③ 探测脚本轮询 1000s≈16.7min。正常跑批 ~1min / 东财慢速也就几分钟，25min 是安全上限。
+    timeout-minutes: 25
 
     steps:
       # 轻量就绪探针：只按「交易日 + 北京 15:00 后」放行，不再探测当天日K是否补上。
@@ -131,7 +135,7 @@ jobs:
           BREADTH_SOURCE: ${{ inputs.source || 'tencent' }}
           BREADTH_WORKERS: ${{ inputs.source == 'eastmoney' && '4' || '32' }}
           BREADTH_RATE: ${{ inputs.source == 'eastmoney' && '0' || '140' }}  # 东财0=禁用令牌桶(其库不读此值，仅为语义清晰)
-          BREADTH_MAX_RUN_SEC: '900'   # watchdog 总时长硬闸（15min），杜绝无限跑
+          BREADTH_MAX_RUN_SEC: '600'   # watchdog 总时长硬闸（10min），杜绝无限跑（平台25min兜底）
           BREADTH_STALL_SEC: '120'     # 进度 120s 无增长即急停
           BREADTH_MAX_501: '5'         # 501 累计 5 次即确认风控、急停
           LIMIT: ${{ inputs.limit }}

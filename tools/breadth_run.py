@@ -370,13 +370,14 @@ def main():
     # 三道自动急停（任一命中即置位 _ABORT + P.request_stop()，worker 立即停发请求）：
     #   ① 卡住：progress 计数 N 秒无增长（默认 120s）→ 无论卡在哪个请求都止损；
     #   ② 501 计数：令牌桶累计 501 >= 阈值（默认 5）→ 确认触发腾讯反爬，立刻停；
-    #   ③ 总时长：超过 MAX_RUN_SEC（默认 900s=15min）→ 兜底硬闸，绝不跑两小时。
+    #   ③ 总时长：超过 MAX_RUN_SEC（默认 600s=10min）→ 兜底硬闸，绝不无限跑。
+    # 三层超时：watchdog 10min（脚本内停+写原因） < 探测轮询1000s < 平台25min强杀。
     # 所有阈值可用环境变量覆盖；_watch_reason 供退出日志写明命中哪一条。
-    MAX_RUN_SEC = int(os.environ.get("BREADTH_MAX_RUN_SEC", "900"))
+    MAX_RUN_SEC = int(os.environ.get("BREADTH_MAX_RUN_SEC", "600"))
     STALL_SEC = int(os.environ.get("BREADTH_STALL_SEC", "120"))
     MAX_501 = int(os.environ.get("BREADTH_MAX_501", "5"))
     _watch_reason = {"v": ""}
-    _snap = {"cnt": 0, "t": time.time()}       # watchdog 读的最新进度快照
+    _snap = {"cnt": 0, "t": time.time(), "ok": 0, "bad": 0}  # watchdog 读的最新进度快照
     _has_bucket = hasattr(P, "BUCKET")
 
     def watchdog():
@@ -387,6 +388,7 @@ def main():
             with _lock:
                 c = _snap["cnt"]
                 last_t = _snap["t"]
+                _ok, _bad = _snap["ok"], _snap["bad"]
             stall = now - last_t
             why = ""
             if elapsed > MAX_RUN_SEC:
@@ -402,7 +404,18 @@ def main():
                 _ABORT.set()
                 if hasattr(P, "request_stop"):
                     P.request_stop()
-                log(f"  !! WATCHDOG 急停：{why}")
+                # v386h：命中急停时把当时的进度/速率/失败数一起打出，
+                # 用户要「从日志找原因」——一眼分清：卡住(c 不动) / 限流(501或bad高) /
+                # 并发不足(c 在涨但慢)。速率用实际请求数或完成数÷耗时。
+                _el = time.time() - t_fetch
+                _rate_txt = ""
+                if _has_bucket:
+                    _tot, _n501, _rr = P.BUCKET.stats()
+                    _rate_txt = f" · 已发{_tot}请求/{_tot/_el:.0f}req/s · 501={_n501}"
+                elif _el > 0:
+                    _rate_txt = f" · {c/_el:.0f}req/s"
+                log(f"  !! WATCHDOG 急停：{why} | 快照 进度{c}/{len(todo)} "
+                    f"有效{_ok} 失败{_bad} 停滞{stall:.0f}s{_rate_txt}")
                 return
 
     def flush(force=False):
@@ -422,6 +435,7 @@ def main():
                 with _lock:
                     bad += 1
                     consec_bad += 1
+                    _snap["ok"], _snap["bad"], _snap["t"] = ok, bad, time.time()
                     if _CIRCUIT_ON and consec_bad >= _CIRCUIT_MAX and not _ABORT.is_set():
                         _ABORT.set()
                         log(f"  !! 熔断：连续 {consec_bad} 只异常，停发新的 kline 请求")
@@ -463,6 +477,7 @@ def main():
                         else:
                             for k in range(5):
                                 cur[k] += e[k]
+                _snap["ok"], _snap["bad"] = ok, bad   # v386h：供 watchdog 急停时打印快照
                 if cnt % FLUSH_EVERY == 0:
                     flush()
     if not _ABORT.is_set():

@@ -194,6 +194,28 @@ jobs:
             git push
           fi
 
+      - name: 提交跑批追溯日志
+        # v387b：if: always() —— 成功/失败/急停/幂等都提交 runlog.jsonl。
+        # 这是用户要的「出问题能回头追溯原因」：每次跑批一行结构化记录随仓库长期保留。
+        # 与「提交数据」步骤分开，避免数据闸门拒绝时连日志也丢；push 前先 rebase 防竞争。
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -f breadth/data/runlog.jsonl ]; then
+            echo "无 runlog（跑批未进入抓取阶段，如探针失败/未到收盘），跳过"
+            exit 0
+          fi
+          git config user.name  "breadth-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain -- breadth/data/runlog.jsonl)" ]; then
+            echo "runlog 无变化，跳过提交"
+            exit 0
+          fi
+          git add breadth/data/runlog.jsonl
+          git pull --rebase origin main || true
+          git commit -m "log: $(TZ=Asia/Shanghai date +%Y-%m-%d) 跑批追溯记录" || echo "无新内容可提交"
+          git push || echo "runlog push 失败（不影响跑批结果）"
+
       - name: 刷新 jsDelivr CDN 缓存
         # jsDelivr 的 @main 默认 12 小时缓存，不刷新的话当天收盘数据要晚半天才可见。
         # purge 是公开的免费接口（实测 status=finished / throttled=false），

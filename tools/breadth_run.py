@@ -83,6 +83,32 @@ def log(*a):
     print(*a, flush=True)
 
 
+# ===== v387b【跑批可追溯日志】所有源共用，每次真正跑批后 append 一行结构化记录 =====
+# 用户要求：跑批时间限制对所有源生效外，还要有日志功能——出问题能回头追溯原因。
+# 落在仓库 breadth/data/runlog.jsonl（随代码提交长期保留、可 git log 追溯），
+# 每次跑批（成功/失败/急停/幂等跳过）都记一条，字段固定便于脚本汇总。
+RUNLOG = os.path.join(OUT_DIR, "runlog.jsonl")
+
+
+def write_runlog(conclusion, *, reason="", src="", workers=0, elapsed=0, rps=0,
+                 ok=0, bad=0, n501=0, universe=0, trade_date="", new_days=0):
+    """append 一行 JSON 到 runlog.jsonl；失败不影响跑批主流程。"""
+    rec = {
+        "ts": bj_stamp(), "source": src or SRC, "workers": workers,
+        "conclusion": conclusion, "reason": reason,
+        "elapsed_sec": round(elapsed), "avg_rps": round(rps),
+        "ok": ok, "bad": bad, "n501": n501, "universe": universe,
+        "trade_date": trade_date, "new_days": new_days,
+    }
+    try:
+        os.makedirs(os.path.dirname(RUNLOG), exist_ok=True)
+        with open(RUNLOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        log(f"[runlog] {conclusion} {reason} 已记录")
+    except Exception as e:
+        log(f"[runlog] 写入失败（不影响跑批）：{e}")
+
+
 def latest_trade_day():
     """拿上证指数的最后一根日K日期，用来判断「今天的收盘数据出来了没」。
 
@@ -317,6 +343,8 @@ def main():
                     write_sse(sse_path)
                 else:
                     log(f"数据已是今日完整版（{om.get('to')}，有效 {om.get('valid')} 只，sse {sse_old['meta']['to']}），跳过本次跑批")
+                write_runlog("idempotent", reason=f"今日数据已完整 {om.get('to')}",
+                             trade_date=om.get("to", ""))
                 return
         except Exception as e:
             log(f"  幂等检查跳过（{e}）")
@@ -492,6 +520,8 @@ def main():
         # v386g：东财源同样输出平均速率，供周末探测的耗时分析脚本判定
         rate_line = f" · 平均 {ok/el:.0f} req/s" if el > 0 else ""
     log(f"抓取完成：有效 {ok}，空/失败 {bad}，耗时 {el:.0f}s{rate_line}")
+    _avg_rps = (ok / el) if el > 0 else 0
+    _n501 = P.BUCKET.stats()[1] if _has_bucket else 0
     if _ABORT.is_set():
         # 熔断/急停后结果必然不完整：直接标 stale，绝不写残缺序列、也不落 state 供续跑
         _reason = (_watch_reason["v"] or
@@ -499,6 +529,8 @@ def main():
         log(f"方案1 护栏触发：{_reason}")
         if mark_stale(out_path, _reason):
             log(f"  已保留上次成功 breadth.json 并写入 stale 标记：{out_path}")
+        write_runlog("abort", reason=_reason, workers=args.workers, elapsed=el,
+                     rps=_avg_rps, ok=ok, bad=bad, n501=_n501, universe=len(uni))
         return
 
     # ===== 方案1（2026-11-12）：失败不静默停更 =====
@@ -516,6 +548,8 @@ def main():
                 log(f"  已保留上次成功 breadth.json 并写入 stale 标记：{out_path}")
             else:
                 log("  无既有 breadth.json 可保留；不写假数据，本次不产出")
+            write_runlog("stale", reason=reason, workers=args.workers, elapsed=el,
+                         rps=_avg_rps, ok=ok, bad=bad, n501=_n501, universe=len(uni))
             return
 
     # ---- 聚合 ----
@@ -535,6 +569,8 @@ def main():
                     f"willrm={agg[last][2]} newadd={agg[last][3]} active={agg[last][4]}")
             else:
                 log(f"修复失败：本次 agg 里没有末日 {last} 的数据（可能日K未覆盖当日）")
+                write_runlog("fail", reason=f"fix-last 无末日 {last} 数据", workers=args.workers,
+                             elapsed=el, rps=_avg_rps, ok=ok, bad=bad, n501=_n501, universe=len(uni))
                 sys.exit(3)
             dates, daycnt, total = old["dates"], old["daycnt"], old["total"]
             willrm, newadd, active = old["willrm"], old["newadd"], old["active"]
@@ -558,8 +594,12 @@ def main():
             if TC.is_trade_day(today_str) and last < today_str:
                 log(f"错误：{today_str} 是交易日，但数据只到 {last}（当天未更新）。"
                     f"本次不发布，退出码 3（让 CF 下一轮继续重试并暴露问题）。")
+                write_runlog("fail", reason=f"交易日 {today_str} 数据只到 {last}", workers=args.workers,
+                             elapsed=el, rps=_avg_rps, ok=ok, bad=bad, n501=_n501, universe=len(uni))
                 sys.exit(3)
             log("没有新交易日，数据保持不变，跳过写入")
+            write_runlog("noop", reason="无新交易日", workers=args.workers, elapsed=el,
+                         rps=_avg_rps, ok=ok, bad=bad, n501=_n501, universe=len(uni))
             return
         else:
             dates = old["dates"] + new_dates
@@ -642,6 +682,9 @@ def main():
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     sz = os.path.getsize(out_path) / 1024
     log(f"已写出 {out_path}  ({sz:.0f} KB)")
+    write_runlog("success", reason="", workers=args.workers, elapsed=el,
+                 rps=_avg_rps, ok=ok, bad=bad, n501=_n501, universe=len(uni),
+                 trade_date=dates[-1], new_days=len(new_dates) if old else len(dates))
 
     # v276：定时全量批次才生成/提交上证 K 线；小样本自测不覆盖线上 sse.json
     if not args.limit:

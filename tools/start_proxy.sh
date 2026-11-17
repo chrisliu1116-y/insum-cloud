@@ -57,13 +57,12 @@ import sys,re
 sys.path.insert(0,'tools')
 from sub_to_clash import deep_decode
 b=open('/tmp/subs/raw_$i.txt','rb').read(); d=deep_decode(b)
-info='订阅#$i 原始%d字符%d'%(len(b),len(d))
-if 'proxies:' in d[:2000]: info+=' 格式=YAML'
-else:
-    first=next((l for l in d.splitlines() if l.strip()),'')
-    pref=re.match(r'([a-z0-9]+)://',first.lower())
-    info+=' 格式=URI 首协议=%s'%(pref.group(1) if pref else first[:16])
-print(info)
+feat=['原始%d字%d'%(len(b),len(d)),'gzip=%s'%(b[:2]==b'\x1f\x8b'),
+      'proxies段=%s'%('proxies:' in d),'YAML项=%s'%bool(re.search(r'(?m)^\s*-\s*name:',d))]
+for proto in ['ss','vmess','vless','trojan','hysteria2']:
+    feat.append('%s=%d'%(proto,d.lower().count(proto+'://')))
+feat.append('html=%s'%bool(re.search(r'<(html|!doctype|body)',d[:500],re.I)))
+print('订阅#$i 特征: '+' '.join(feat))
 "
   python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
 done <<< "${SUB_URLS}"

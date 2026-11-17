@@ -210,14 +210,16 @@ def convert(raw_text):
     text = raw_text.strip()
     nodes = []
     seen = set()
-    # 1) 直接就是 YAML
+    # 1) 直接就是 YAML（解析出节点才 return；解析失败要继续走分享链接路径，
+    #    机场订阅落地页常含 proxies: 字样但不是合法 YAML，之前在这里提前 return 导致 0 节点）
     if looks_like_yaml(text):
         for p in extract_from_yaml(text):
             if isinstance(p, dict) and p.get('server'):
                 p = dict(p)
                 p['name'] = uniq_name(p.get('name'), seen)
                 nodes.append(p)
-        return nodes
+        if nodes:
+            return nodes
     # 2) 尝试整体 base64 解码（含 gzip 压缩的订阅）
     decoded = maybe_gunzip(b64decode(text)).decode('utf-8', 'replace')
     lines = []

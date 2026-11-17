@@ -129,37 +129,38 @@ jobs:
               print('::error::解析出的节点不足 3 个，订阅格式可能不支持')
               sys.exit(1)
           PY
-          # 拼装最终 config.yaml：proxies + 本地 filter 组 + 规则
-          cat > /tmp/mihomo-conf/config.yaml <<'EOF'
-          mixed-port: 7890
-          allow-lan: false
-          mode: rule
-          log-level: warning
-          external-controller: 127.0.0.1:9090
-          health-check:
-            enable: true
-            interval: 300
-            url: https://cp.cloudflare.com/generate_204
-          proxy-groups:
-            - name: "auto"
-              type: load-balance
-              filter: "(?i)(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)"
-              url: https://cp.cloudflare.com/generate_204
-              interval: 300
-              strategy: round-robin
-          rules:
-            - MATCH,auto
-          EOF
-          # 把 proxies 段插到 config.yaml 顶部
+          # 拼装最终 config.yaml：内嵌 proxies + 港台新节点显式列表组 + 规则
+          # 注意：mihomo 的 load-balance 组用 filter 时必须配 use(provider)，
+          # 对内嵌 proxies 不能直接用 filter（报 "use or proxies missing"），
+          # 所以这里按正则筛出节点名，显式写进 proxies 列表。
           python3 - <<'PY'
-          cfg=open('/tmp/mihomo-conf/config.yaml',encoding='utf-8').read()
-          proxies=open('/tmp/subs/proxies_all.yaml',encoding='utf-8').read()
-          # proxies 段统一缩进 0（都是顶层），直接拼在 health-check 之前也可；放最前最稳
-          combo=proxies.rstrip()+'\n\n'+cfg
-          open('/tmp/mihomo-conf/config.yaml','w',encoding='utf-8').write(combo)
-          print('config.yaml 已生成（proxies 内嵌，内容不打印）')
+          import re, yaml
+          d=yaml.safe_load(open('/tmp/subs/proxies_all.yaml',encoding='utf-8')) or {}
+          proxies=d.get('proxies') or []
+          pat=re.compile(r'(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)',re.I)
+          picked=[p['name'] for p in proxies if pat.search(p.get('name',''))]
+          if len(picked)<3:
+              picked=[p['name'] for p in proxies]   # 兜底：正则没命中就用全部
+          print('auto 组节点数:',len(picked),'（从',len(proxies),'个中筛出）')
+          import sys
+          sys.path.insert(0,'tools')
+          from sub_to_clash import to_yaml, _scalar
+          lines=[to_yaml(proxies).rstrip(), '',
+            'mixed-port: 7890','allow-lan: false','mode: rule','log-level: warning',
+            'external-controller: 127.0.0.1:9090','',
+            'proxy-groups:','  - name: "auto"','    type: load-balance','    proxies:']
+          for n in picked:
+              lines.append('      - %s' % _scalar(n))
+          lines += ['    url: https://cp.cloudflare.com/generate_204',
+                    '    interval: 300','    strategy: round-robin','',
+                    'rules:','  - MATCH,auto','']
+          open('/tmp/mihomo-conf/config.yaml','w',encoding='utf-8').write('\n'.join(lines))
+          print('config.yaml 已生成（auto 组显式列出',len(picked),'个节点）')
+          # 生成后用 PyYAML 自检语法，避免再次到 mihomo 才报错
+          chk=yaml.safe_load(open('/tmp/mihomo-conf/config.yaml',encoding='utf-8'))
+          assert chk.get('proxies') and chk.get('proxy-groups')
+          print('配置自检通过: proxies=%d 组=%d' % (len(chk['proxies']),len(chk['proxy-groups'])))
           PY
-          # 校验配置能被 mihomo 解析（下面启动步骤会实际加载）
 
       - name: 启动 mihomo 并验证连通性（零东财请求）
         run: |

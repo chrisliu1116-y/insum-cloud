@@ -62,6 +62,14 @@ concurrency:
   group: breadth
   cancel-in-progress: false
 
+# v412【可切换默认源】切源脚本改这两行常量即可整体切源，不需要碰下方表达式。
+# 日常 CF 轮 dispatch 不传 input → 走这两个默认值；周日探测显式传
+# source=eastmoney / no_probe=true 覆盖。用户口径：切到东财后日常也一次性跑完、
+# 不用探针（探针探不通也跑不成，止损靠 watchdog/熔断/护栏）。
+env:
+  DEFAULT_SOURCE: tencent       # 切源脚本改：tencent <-> eastmoney
+  DEFAULT_NO_PROBE: 'false'     # 切到 eastmoney 时改为 'true'（日常也不探针）
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -132,13 +140,12 @@ jobs:
       - name: 跑批
         if: steps.probe.outputs.ready != 'false'
         env:
-          # v386f：支持按源选配置。inputs.source=eastmoney 时用东财原样配置
-          # （4 并发 + 120~220ms 抖动 + retries1 + 80根增量，一次连续跑完，
-          #  这是 11-09/11-13 GHA 成功那套），不走腾讯令牌桶。
-          # 默认（含 CF 日常轮）仍 tencent + 32 并发 + 140 令牌桶，完全不变。
-          BREADTH_SOURCE: ${{ inputs.source || 'tencent' }}
-          BREADTH_WORKERS: ${{ inputs.source == 'eastmoney' && '4' || '32' }}
-          BREADTH_RATE: ${{ inputs.source == 'eastmoney' && '0' || '140' }}  # 东财0=禁用令牌桶(其库不读此值，仅为语义清晰)
+          # v412：有效源 = inputs.source（周日探测显式传）或顶层 env.DEFAULT_SOURCE（CF 日常轮）。
+          # 东财原样配置 = 4 并发 + 120~220ms 抖动 + retries1 + 80 根增量，一次连续跑完；
+          # 腾讯 = 32 并发 + 140 令牌桶。两套都不再默认带探针（no_probe 见下）。
+          BREADTH_SOURCE: ${{ inputs.source || env.DEFAULT_SOURCE }}
+          BREADTH_WORKERS: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '4' || '32' }}
+          BREADTH_RATE: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '0' || '140' }}  # 东财0=禁用令牌桶
           BREADTH_MAX_RUN_SEC: '600'   # watchdog 总时长硬闸（10min），杜绝无限跑（平台25min兜底）
           BREADTH_STALL_SEC: '120'     # 进度 120s 无增长即急停
           BREADTH_MAX_501: '5'         # 501 累计 5 次即确认风控、急停
@@ -147,7 +154,7 @@ jobs:
           SINCE: ${{ inputs.since }}
           RECHECK: ${{ inputs.recheck }}
           FIX_LAST: ${{ inputs.fix_last }}
-          NO_PROBE: ${{ inputs.no_probe }}
+          NO_PROBE: ${{ inputs.no_probe || env.DEFAULT_NO_PROBE == 'true' }}
         run: |
           set -euo pipefail
           ARGS="--out breadth/data/breadth.json"

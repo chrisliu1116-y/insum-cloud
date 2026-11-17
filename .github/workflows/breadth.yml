@@ -50,6 +50,10 @@ on:
         description: '数据源：eastmoney=东财原配置(4并发/无令牌桶)，留空=tencent(默认32并发+140桶)'
         required: false
         default: ''
+      no_probe:
+        description: '跳过跑批前的2个东财探针请求(clist+kline)直接一次跑完；周日恢复探测用（用户2026-11-17决定）'
+        type: boolean
+        default: false
 
 permissions:
   contents: write                # 需要把 JSON 提交回仓库
@@ -143,6 +147,7 @@ jobs:
           SINCE: ${{ inputs.since }}
           RECHECK: ${{ inputs.recheck }}
           FIX_LAST: ${{ inputs.fix_last }}
+          NO_PROBE: ${{ inputs.no_probe }}
         run: |
           set -euo pipefail
           ARGS="--out breadth/data/breadth.json"
@@ -155,6 +160,7 @@ jobs:
           if [ "${RECHECK:-false}" = "true" ]; then ARGS="$ARGS --recheck"; fi
           if [ "${FIX_LAST:-false}" = "true" ]; then ARGS="$ARGS --incremental --fix-last"; fi
           if [ "${NO_WAIT:-false}" = "true" ]; then ARGS="$ARGS --no-wait"; fi
+          if [ "${NO_PROBE:-false}" = "true" ]; then ARGS="$ARGS --no-probe"; fi
           echo ">>> python tools/breadth_run.py $ARGS"
           python tools/breadth_run.py $ARGS
 

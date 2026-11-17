@@ -270,6 +270,10 @@ def main():
     ap.add_argument("--fix-last", action="store_true",
                     help="修复末日行：保留全部历史，用本次重算的末日值覆盖最后一根（坏数据修复用，配合 --incremental）")
     ap.add_argument("--out", default="", help="输出路径（默认 breadth/data/breadth.json；云端跑批用）")
+    ap.add_argument("--no-probe", action="store_true",
+                    help="跳过跑批前的探针链(clist+kline)直接一次跑完；周日恢复探测用"
+                         "（用户2026-11-17决定：探不通也跑不成，探针只是多2请求；"
+                         "超时/熔断已能止损，护栏仍能拒绝脏数据）")
     args = ap.parse_args()
 
     global LMT_USE, BEG
@@ -364,8 +368,13 @@ def main():
         # v361d【源专属探针链】探什么、阈值多少，由源模块自己的配置决定：
         #   东财 breadth_lib.PROBE_CHAIN = [clist>=5000, kline>=1]（2 请求止损）；
         #   腾讯 tx_lib.PROBE_CHAIN = []（之前的跑法没有探针，保持原样）。
+        # v412【--no-probe】周日恢复探测跳过探针，一次连续跑完（用户 2026-11-17 决定）：
+        # 探针探不通本来也跑不成，只是多 2 个请求；真跑的 watchdog(600s)/stall(120s)/
+        # 501 熔断(5 次)/提交护栏(uni<5000,ok<5000) 已能止损且拒绝脏数据，探针冗余。
+        if getattr(args, 'no_probe', False):
+            log("[no-probe] 周日探测：跳过探针链，一次连续跑完（靠 watchdog/熔断/护栏止损）")
         for _nm, _fn, _min in (getattr(P, 'PROBE_CHAIN', None) or []):
-            if args.limit:
+            if args.limit or getattr(args, 'no_probe', False):
                 break
             _v = _fn()
             log(f"{_nm} 健康检查：{_v}（期望 >= {_min}）")

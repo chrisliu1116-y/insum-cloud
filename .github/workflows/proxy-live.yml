@@ -1,0 +1,170 @@
+name: 代理出口实战验证（临时代理跑批·不提交数据）
+
+# 2026-11-18 临时验证 workflow：GitHub Actions 沙盒内起 mihomo，
+# 从 SUB_URL(Secrets) 拉机场订阅，过滤中国香港/中国台湾/新加坡节点，
+# 用 load-balance 分摊，经 127.0.0.1:7890 代理跑【纯东财全量】。
+# 目的：验证机场节点出口 IP 能否绕开东财对 Azure/CF 机房 IP 的限流。
+# 安全约束：
+#   ① 订阅只从 Secrets 读，绝不 echo 到日志（GitHub 也会自动 mask）；
+#   ② 连通性验证只请求 cp.cloudflare.com，零东财；
+#   ③ 实战 5 分钟硬闸（timeout 300），到点即杀；
+#   ④ 本 workflow 无任何「提交数据」步骤，绝不用验证数据覆盖线上 breadth/sse；
+#   ⑤ 跑批结束 if: always() 销毁 mihomo 进程与临时文件。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read          # 只需读仓库，不写
+
+jobs:
+  proxy-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10   # 平台级兜底（下载~1min + 连通~1min + 实战5min 留余量）
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 安装跑批依赖
+        run: pip install -r requirements.txt
+
+      - name: 校验 SUB_URL 已配置（不打印值）
+        env:
+          SUB_URL: ${{ secrets.SUB_URL }}
+        run: |
+          if [ -z "${SUB_URL:-}" ]; then
+            echo "::error::SUB_URL secret 未配置，终止"
+            exit 1
+          fi
+          echo "SUB_URL 已配置（长度 ${#SUB_URL}），值不打印"
+
+      - name: 下载 mihomo 内核
+        run: |
+          set -euo pipefail
+          dl() {
+            gh api repos/MetaCubeX/mihomo/releases/latest \
+              --jq '.assets[] | select(.name | test("linux-amd64-compatible.*\\.gz$")) | .browser_download_url' 2>/dev/null | head -1 \
+            || true
+          }
+          URL="$(dl)"
+          if [ -z "$URL" ]; then
+            URL="$(gh api repos/MetaCubeX/mihomo/releases/latest \
+              --jq '.assets[] | select(.name | test("linux-amd64.*\\.gz$")) | .browser_download_url' 2>/dev/null | head -1)"
+          fi
+          if [ -z "$URL" ]; then
+            echo "::error::无法获取 mihomo 下载地址"
+            exit 1
+          fi
+          echo "下载 mihomo: ${URL##*/}"
+          curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
+          /tmp/mihomo -v 2>&1 | head -1 || true
+
+      - name: 生成 mihomo 配置（订阅从 Secrets 注入，不打印）
+        env:
+          SUB_URL: ${{ secrets.SUB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mihomo-conf
+          cat > /tmp/mihomo-conf/config.yaml <<EOF
+          mixed-port: 7890
+          allow-lan: false
+          mode: rule
+          log-level: warning
+          external-controller: 127.0.0.1:9090
+          proxy-providers:
+            sub:
+              type: http
+              url: "${SUB_URL}"
+              interval: 3600
+              header:
+                User-Agent:
+                  - "Clash/v1.18.0"
+                  - "mihomo/1.18.3"
+              health-check:
+                enable: true
+                interval: 300
+                url: https://cp.cloudflare.com/generate_204
+          proxy-groups:
+            - name: "auto"
+              type: load-balance
+              use:
+                - sub
+              filter: "(?i)(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)"
+              url: https://cp.cloudflare.com/generate_204
+              interval: 300
+              strategy: round-robin
+          rules:
+            - MATCH,auto
+          EOF
+          echo "配置已生成（含订阅地址，内容不打印）"
+
+      - name: 启动 mihomo 并验证连通性（零东财请求）
+        run: |
+          set -euo pipefail
+          /tmp/mihomo -d /tmp/mihomo-conf > /tmp/mihomo.log 2>&1 &
+          echo $! > /tmp/mihomo.pid
+          # 等订阅拉取 + 节点健康检查
+          OK=0
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -x http://127.0.0.1:7890 \
+                     --max-time 10 https://cp.cloudflare.com/generate_204 || true)
+            if [ "$code" = "204" ]; then OK=1; break; fi
+            sleep 2
+          done
+          if [ "$OK" != "1" ]; then
+            echo "::error::代理连通失败（30 次尝试均未拿到 204）"
+            echo "--- mihomo.log 末尾 ---"; tail -30 /tmp/mihomo.log || true
+            exit 1
+          fi
+          echo "代理连通 OK（经 7890 拿到 204）"
+          # 列出过滤出的节点（只看名字，不含订阅地址）
+          curl -s http://127.0.0.1:9090/proxies/auto \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); a=d.get('all',[]); print('过滤后节点数:',len(a)); print('节点:',a[:20])"
+
+      - name: 【实战】纯东财全量（注入代理，5分钟硬闸，不提交）
+        env:
+          HTTP_PROXY: http://127.0.0.1:7890
+          HTTPS_PROXY: http://127.0.0.1:7890
+        run: |
+          set -uo pipefail
+          # 用东财历史底稿作为增量起点（避开两源混拼护栏，且保留 8818 日历史）
+          cp breadth/data/_archive_breadth_em_20261114.json breadth/data/breadth.json
+          echo "起点：东财底稿 8818 日 / 5584 只 / 末日 2026-11-12"
+          echo "启动全量实战：4 并发 / 80 根增量 / 5 分钟硬闸（timeout 300）"
+          set +e
+          timeout 300 python tools/breadth_run.py --out breadth/data/breadth.json --incremental
+          RC=$?
+          set -e
+          echo ">>> 实战退出码: $RC （124=5分钟硬闸到点强杀）"
+          if [ "$RC" = "124" ]; then
+            echo "::warning::实战超过 5 分钟被掐断——按用户口径，超时即判定有问题"
+          fi
+          # 打印结果摘要（供日志判定，不提交）
+          python3 - <<'PY'
+          import json
+          try:
+            d=json.load(open('breadth/data/breadth.json',encoding='utf-8'))
+            m=d.get('meta',{})
+            print('实战结果: universe=%s 交易日=%s 末日=%s valid=%s stale=%s reason=%s'%(
+              m.get('universe'),len(d.get('dates',[])),d.get('dates',[-1])[-1] if d.get('dates') else None,
+              m.get('valid'),m.get('stale'),m.get('stale_reason')))
+          except Exception as e:
+            print('结果读取失败:',e)
+          PY
+          echo "本 workflow 不提交任何数据，线上 breadth/sse 不受影响"
+
+      - name: 清理 mihomo（always）
+        if: always()
+        run: |
+          if [ -f /tmp/mihomo.pid ]; then
+            kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true
+          fi
+          pkill -f '/tmp/mihomo' 2>/dev/null || true
+          rm -f /tmp/mihomo /tmp/mihomo.log /tmp/mihomo.pid
+          find /tmp/mihomo-conf -type f -delete 2>/dev/null || true
+          echo "mihomo 进程与临时文件已清理"

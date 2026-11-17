@@ -350,9 +350,12 @@ def main():
     nodes = convert(raw)
     open(sys.argv[2], 'w', encoding='utf-8').write(to_yaml(nodes))
     from collections import Counter
+    from node_filter import is_apac, EXCLUDE_RE
     types = Counter(n.get('type') for n in nodes)
-    geo = sum(1 for n in nodes if re.search(r'(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)', n.get('name', ''), re.I))
-    print('解析节点 %d 个，协议分布 %s，港台新命名 %d 个' % (len(nodes), dict(types), geo), file=sys.stderr)
+    valid = [n for n in nodes if n.get('name') and not EXCLUDE_RE.search(n['name'])]
+    geo = sum(1 for n in valid if is_apac(n.get('name')))
+    print('解析节点 %d 个（剔除信息伪节点后有效 %d）协议分布 %s，亚太命名 %d 个' % (
+        len(nodes), len(valid), dict(types), geo), file=sys.stderr)
 
 if __name__ == '__main__':
     main()

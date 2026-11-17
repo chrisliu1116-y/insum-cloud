@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 机场代理启动器：GHA 沙盒内起 mihomo，从 SUB_URLS(Secrets) 拉 3 个订阅，
-# 本地解析聚合成亚太(港台新)节点池，load-balance 分摊，混合端口 7890。
+# 本地解析聚合成亚太(港台新日韩)节点池，load-balance 分摊，混合端口 7890。
 # 供 breadth.yml（日常）与 proxy-live.yml（验证/正式）共用。
 # 安全：订阅只从环境变量读，日志只打印节点数/UA/HTTP码，绝不打印链接内容。
 set -euo pipefail
@@ -71,28 +71,28 @@ echo "[proxy] 共拉取 $i 个订阅"
 
 echo "[proxy] 聚合各源节点"
 python3 - <<'PY'
-import glob, yaml, os, re, sys
+import glob, yaml, os, sys
 sys.path.insert(0,'tools')
 from sub_to_clash import to_yaml, _scalar
+from node_filter import is_apac, EXCLUDE_RE
 proxies=[]; seen=set()
-pat=re.compile(r'(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)',re.I)
 files=sorted(glob.glob('/tmp/subs/proxies_*.yaml'))
 print('=== 各订阅节点数（仅数量）===')
 for f in files:
     d=yaml.safe_load(open(f,encoding='utf-8')) or {}
-    ps=d.get('proxies') or []
-    geo=sum(1 for p in ps if pat.search(p.get('name','')))
+    ps=[p for p in (d.get('proxies') or []) if p.get('name') and not EXCLUDE_RE.search(p['name'])]
+    geo=sum(1 for p in ps if is_apac(p.get('name')))
     idx=os.path.basename(f).replace('proxies_','').replace('.yaml','')
-    print('  订阅#%s 节点%d 港台新%d'%(idx,len(ps),geo))
+    print('  订阅#%s 有效节点%d 亚太%d'%(idx,len(ps),geo))
 for f in files:
     d=yaml.safe_load(open(f,encoding='utf-8')) or {}
     for p in (d.get('proxies') or []):
         n=p.get('name')
-        if n and n not in seen: seen.add(n); proxies.append(p)
-print('合并唯一节点:',len(proxies))
+        if n and n not in seen and not EXCLUDE_RE.search(n): seen.add(n); proxies.append(p)
+print('合并唯一有效节点:',len(proxies))
 if len(proxies)<3:
     print('::error::代理节点不足3个'); sys.exit(1)
-picked=[p['name'] for p in proxies if pat.search(p.get('name',''))]
+picked=[p['name'] for p in proxies if is_apac(p.get('name'))]
 if len(picked)<3: picked=[p['name'] for p in proxies]
 print('亚太池节点:',len(picked))
 lines=[to_yaml(proxies).rstrip(),'',

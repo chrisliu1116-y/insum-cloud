@@ -74,89 +74,30 @@ jobs:
           curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
           /tmp/mihomo -v 2>&1 | head -1 || true
 
+      - name: 启动本地 subconverter（Docker，订阅不外发第三方）
+        run: |
+          set -euo pipefail
+          docker run -d --name mp-subconverter -p 127.0.0.1:25500:25500 \
+            tindy2013/subconverter:latest
+          # 等就绪（/version 返回 200）
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 3 http://127.0.0.1:25500/version >/dev/null 2>&1; then
+              echo "subconverter 就绪"; break
+            fi
+            sleep 2
+          done
+          curl -fsS --max-time 3 http://127.0.0.1:25500/version || \
+            echo "::warning::subconverter 未就绪，订阅将只能用直连解析"
+
       - name: 拉订阅并转换为 proxies（本地解析，不外发、不打印订阅内容）
         env:
           SUB_URLS: ${{ secrets.SUB_URLS }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/mihomo-conf /tmp/subs
-          # 逐个订阅拉取 -> 本地解析成 Clash proxies（订阅地址只作 curl 参数，不 echo）
-          i=0
-          while IFS= read -r url; do
-            url="$(printf '%s' "$url" | tr -d '\r' | xargs || true)"
-            case "$url" in http://*|https://*) ;; *) continue ;; esac
-            i=$((i+1))
-            echo "拉取订阅 #$i ..."
-            # UA 轮换：不同机场对被屏蔽的 UA 反应不同，逐个尝试直到拿到非空响应
-            got=0
-            for ua in 'Clash/v1.18.0' 'Clash-verge/v1.6.0' 'mihomo/1.19.0' \
-                      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36'; do
-              code="$(curl -sSL --max-time 60 -A "$ua" -w '%{http_code}' \
-                        "$url" -o "/tmp/subs/raw_$i.txt" || echo 000)"
-              sz="$(wc -c < "/tmp/subs/raw_$i.txt" 2>/dev/null || echo 0)"
-              echo "  UA=${ua%%/*} HTTP=$code 字节=$sz"
-              if [ "$code" = "200" ] && [ "${sz:-0}" -gt 100 ]; then got=1; break; fi
-            done
-            if [ "$got" != "1" ]; then echo "::warning::订阅 #$i 所有 UA 均失败，跳过"; continue; fi
-            # 只打印结构特征矩阵（布尔/计数），绝不打印订阅内容或节点凭据
-            python3 -c "
-          import sys,re
-          sys.path.insert(0,'tools')
-          from sub_to_clash import deep_decode
-          b=open('/tmp/subs/raw_$i.txt','rb').read()
-          d=deep_decode(b)
-          feat=[]
-          feat.append('原始%d字%d'%(len(b),len(d)))
-          feat.append('gzip魔数=%s'%(b[:2]==b'\x1f\x8b'))
-          feat.append('proxies段=%s'%('proxies:' in d))
-          feat.append('YAML节点项=%s'%bool(re.search(r'(?m)^\s*-\s*name:',d)))
-          for proto in ['ss','vmess','vless','trojan','hysteria2']:
-            feat.append('%s=%d'%(proto,d.lower().count(proto+'://')))
-          feat.append('html=%s'%bool(re.search(r'<(html|!doctype|body)',d[:500],re.I)))
-          feat.append('json=%s'%(d.lstrip()[:1] in ('{','[')))
-          feat.append('outbounds=%s'%('outbounds:' in d))
-          feat.append('换行=%d'%d.count(chr(10)))
-          print('订阅 #$i 特征: '+' '.join(feat))
-          # 只打印前若干行的「键名」（冒号前），绝不打印值/URL/凭据
-          keys=[]
-          for ln in d.splitlines()[:60]:
-            s=ln.strip()
-            if ':' in s and not s.startswith(('http','ss://','vmess://','vless://','trojan://')):
-              k=s.split(':',1)[0].strip()
-              if k and len(k)<30 and k not in keys: keys.append(k)
-          print('订阅 #$i 顶层键名样本(无值):',keys[:12])
-          "
-            python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
-          done <<< "${SUB_URLS}"
-          echo "共拉取 $i 个订阅"
-          # 逐源统计 + 合并所有 proxies_*.yaml（只打印数量，不打印节点/链接）
-          python3 - <<'PY'
-          import glob, yaml, os, sys
-          sys.path.insert(0,'tools')
-          from node_filter import is_apac, EXCLUDE_RE
-          proxies=[]
-          seen=set()
-          files=sorted(glob.glob('/tmp/subs/proxies_*.yaml'))
-          print('=== 各订阅解析结果（仅数量）===')
-          for f in files:
-              d=yaml.safe_load(open(f,encoding='utf-8')) or {}
-              ps=[p for p in (d.get('proxies') or []) if p.get('name') and not EXCLUDE_RE.search(p['name'])]
-              geo=sum(1 for p in ps if is_apac(p.get('name')))
-              idx=os.path.basename(f).replace('proxies_','').replace('.yaml','')
-              print('  订阅 #%s: 有效节点 %d 个，其中亚太 %d 个' % (idx,len(ps),geo))
-          for f in files:
-              d=yaml.safe_load(open(f,encoding='utf-8')) or {}
-              for p in (d.get('proxies') or []):
-                  n=p.get('name')
-                  if n and n not in seen and not EXCLUDE_RE.search(n):
-                      seen.add(n); proxies.append(p)
-          from sub_to_clash import to_yaml
-          open('/tmp/subs/proxies_all.yaml','w',encoding='utf-8').write(to_yaml(proxies))
-          print('合并后唯一有效节点数:',len(proxies))
-          if len(proxies)<3:
-              print('::error::解析出的节点不足 3 个，订阅格式可能不支持')
-              sys.exit(1)
-          PY
+          # 统一订阅拉取+转换+聚合（直连失败/0节点自动 fallback subconverter；
+          # 仅打印节点数量，绝不打印链接内容或凭据）
+          python3 tools/fetch_subs.py
           # 自检模式：只解析、不跑批、不提交
           if [ "${{ inputs.probe_only }}" = "true" ]; then
             echo "=== 自检模式完成：3 源解析已验证，不跑批不提交 ==="
@@ -310,6 +251,7 @@ jobs:
             kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true
           fi
           pkill -f '/tmp/mihomo' 2>/dev/null || true
+          docker rm -f mp-subconverter 2>/dev/null || true
           rm -f /tmp/mihomo /tmp/mihomo.log /tmp/mihomo.pid
-          find /tmp/mihomo-conf -type f -delete 2>/dev/null || true
-          echo "mihomo 进程与临时文件已清理"
+          find /tmp/mihomo-conf /tmp/subs -type f -delete 2>/dev/null || true
+          echo "mihomo / subconverter 进程与临时文件已清理"

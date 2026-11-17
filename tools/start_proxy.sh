@@ -37,72 +37,34 @@ else
 fi
 /tmp/mihomo -v 2>&1 | head -1 || true
 
-echo "[proxy] 拉取并解析订阅（仅打印数量）"
-i=0
-while IFS= read -r url; do
-  url="$(printf '%s' "$url" | tr -d '\r' | xargs || true)"
-  case "$url" in http://*|https://*) ;; *) continue ;; esac
-  i=$((i+1))
-  got=0
-  for ua in 'Clash/v1.18.0' 'Clash-verge/v1.6.0' 'mihomo/1.19.0' \
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36'; do
-    code="$(curl -sSL --max-time 60 -A "$ua" -w '%{http_code}' "$url" -o "/tmp/subs/raw_$i.txt" || echo 000)"
-    sz="$(wc -c < "/tmp/subs/raw_$i.txt" 2>/dev/null || echo 0)"
-    echo "  订阅#$i UA=${ua%%/*} HTTP=$code 字节=$sz"
-    if [ "$code" = "200" ] && [ "${sz:-0}" -gt 100 ]; then got=1; break; fi
+echo "[proxy] 启动本地 subconverter（Docker，订阅不外发第三方）"
+if command -v docker >/dev/null 2>&1; then
+  docker run -d --name mp-subconverter -p 127.0.0.1:25500:25500 \
+    tindy2013/subconverter:latest 2>/dev/null || true
+  for i in $(seq 1 20); do
+    if curl -fsS --max-time 3 http://127.0.0.1:25500/version >/dev/null 2>&1; then
+      echo "[proxy] subconverter 就绪"; break
+    fi
+    sleep 2
   done
-  if [ "$got" != "1" ]; then echo "[proxy] ::warning::订阅#$i 所有 UA 失败，跳过"; continue; fi
-  python3 -c "
-import sys,re
-sys.path.insert(0,'tools')
-from sub_to_clash import deep_decode
-b=open('/tmp/subs/raw_$i.txt','rb').read(); d=deep_decode(b)
-feat=['原始%d字%d'%(len(b),len(d)),'gzip=%s'%(b[:2]==b'\x1f\x8b'),
-      'proxies段=%s'%('proxies:' in d),'YAML项=%s'%bool(re.search(r'(?m)^\s*-\s*name:',d))]
-for proto in ['ss','vmess','vless','trojan','hysteria2']:
-    feat.append('%s=%d'%(proto,d.lower().count(proto+'://')))
-feat.append('html=%s'%bool(re.search(r'<(html|!doctype|body)',d[:500],re.I)))
-feat.append('json=%s'%(d.lstrip()[:1] in ('{','[')))
-feat.append('outbounds=%s'%('outbounds:' in d))
-print('订阅#$i 特征: '+' '.join(feat))
-keys=[]
-for ln in d.splitlines()[:60]:
-    s=ln.strip()
-    if ':' in s and not s.startswith(('http','ss://','vmess://','vless://','trojan://')):
-        k=s.split(':',1)[0].strip()
-        if k and len(k)<30 and k not in keys: keys.append(k)
-print('订阅#$i 顶层键名(无值):',keys[:12])
-"
-  python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
-done <<< "${SUB_URLS}"
-echo "[proxy] 共拉取 $i 个订阅"
+else
+  echo "[proxy] ::warning::无 docker，订阅将只能用直连解析"
+fi
 
-echo "[proxy] 聚合各源节点"
+echo "[proxy] 拉取并解析订阅（直连失败自动 fallback 本地转换器，仅打印数量）"
+python3 tools/fetch_subs.py
+
+echo "[proxy] 生成 mihomo 配置"
 python3 - <<'PY'
-import glob, yaml, os, sys
+import yaml, sys
 sys.path.insert(0,'tools')
 from sub_to_clash import to_yaml, _scalar
-from node_filter import is_apac, EXCLUDE_RE
-proxies=[]; seen=set()
-files=sorted(glob.glob('/tmp/subs/proxies_*.yaml'))
-print('=== 各订阅节点数（仅数量）===')
-for f in files:
-    d=yaml.safe_load(open(f,encoding='utf-8')) or {}
-    ps=[p for p in (d.get('proxies') or []) if p.get('name') and not EXCLUDE_RE.search(p['name'])]
-    geo=sum(1 for p in ps if is_apac(p.get('name')))
-    idx=os.path.basename(f).replace('proxies_','').replace('.yaml','')
-    print('  订阅#%s 有效节点%d 亚太%d'%(idx,len(ps),geo))
-for f in files:
-    d=yaml.safe_load(open(f,encoding='utf-8')) or {}
-    for p in (d.get('proxies') or []):
-        n=p.get('name')
-        if n and n not in seen and not EXCLUDE_RE.search(n): seen.add(n); proxies.append(p)
-print('合并唯一有效节点:',len(proxies))
-if len(proxies)<3:
-    print('::error::代理节点不足3个'); sys.exit(1)
+from node_filter import is_apac
+d=yaml.safe_load(open('/tmp/subs/proxies_all.yaml',encoding='utf-8')) or {}
+proxies=d.get('proxies') or []
 picked=[p['name'] for p in proxies if is_apac(p.get('name'))]
 if len(picked)<3: picked=[p['name'] for p in proxies]
-print('亚太池节点:',len(picked))
+print('亚太池节点:',len(picked),'/ 有效:',len(proxies))
 lines=[to_yaml(proxies).rstrip(),'',
   'mixed-port: 7890','allow-lan: false','mode: rule','log-level: warning',
   'external-controller: 127.0.0.1:9090','',

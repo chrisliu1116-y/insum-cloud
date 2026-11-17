@@ -271,6 +271,7 @@ jobs:
         run: |
           if [ -f /tmp/mihomo.pid ]; then kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true; fi
           pkill -f '/tmp/mihomo' 2>/dev/null || true
+          docker rm -f mp-subconverter 2>/dev/null || true
           rm -f /tmp/mihomo /tmp/mihomo.log /tmp/mihomo.pid
           find /tmp/subs /tmp/mihomo-conf -type f -delete 2>/dev/null || true
-          echo "mihomo 与临时文件已清理"
+          echo "mihomo / subconverter 与临时文件已清理"

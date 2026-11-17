@@ -1,21 +1,27 @@
-name: 代理出口实战验证（临时代理跑批·不提交数据）
+name: 机场代理东财全量跑批（正式）
 
-# 2026-11-18 临时验证 workflow：GitHub Actions 沙盒内起 mihomo，
-# 从 SUB_URL(Secrets) 拉机场订阅，过滤中国香港/中国台湾/新加坡节点，
-# 用 load-balance 分摊，经 127.0.0.1:7890 代理跑【纯东财全量】。
-# 目的：验证机场节点出口 IP 能否绕开东财对 Azure/CF 机房 IP 的限流。
+# 2026-11-18 正式 workflow（验证已成功：5585只/失败0/52req/s/107s）：
+# GitHub Actions 沙盒内起 mihomo，从 SUB_URLS(Secrets) 拉 3 个机场订阅，
+# 本地解析聚合亚太节点，load-balance 分摊，30 并发经 127.0.0.1:7890
+# 代理跑【纯东财全量】，成功后提交 breadth/sse 更新线上数据。
 # 安全约束：
-#   ① 订阅只从 Secrets 读，绝不 echo 到日志（GitHub 也会自动 mask）；
-#   ② 连通性验证只请求 cp.cloudflare.com，零东财；
-#   ③ 实战 5 分钟硬闸（timeout 300），到点即杀；
-#   ④ 本 workflow 无任何「提交数据」步骤，绝不用验证数据覆盖线上 breadth/sse；
-#   ⑤ 跑批结束 if: always() 销毁 mihomo 进程与临时文件。
+#   ① 订阅只从 Secrets 读，日志只打印节点数/UA/HTTP码，绝不打印链接内容（GitHub 也自动 mask）；
+#   ② probe_only=true 时只做订阅解析自检（零东财、不跑批、不提交），确认 3 源都出节点；
+#   ③ 连通性验证只请求 cp.cloudflare.com，零东财；
+#   ④ 实战 10 分钟硬闸 + 30 并发 + 异常降速保底；
+#   ⑤ 提交前多重护栏（universe/交易日/sse同日），异常一律拒绝提交，不用坏数据覆盖线上；
+#   ⑥ 跑批结束 if: always() 销毁 mihomo 进程与临时文件。
 
 on:
   workflow_dispatch:
+    inputs:
+      probe_only:
+        description: '自检模式：只拉3个订阅解析出节点数，不跑批不提交（正式跑前验证用）'
+        type: boolean
+        default: false
 
 permissions:
-  contents: read          # 只需读仓库，不写
+  contents: write         # 正式跑需提交 breadth/sse/runlog
 
 jobs:
   proxy-live:
@@ -81,45 +87,56 @@ jobs:
             case "$url" in http://*|https://*) ;; *) continue ;; esac
             i=$((i+1))
             echo "拉取订阅 #$i ..."
-            curl -fsSL --max-time 60 \
-              -H 'User-Agent: Clash/v1.18.0' \
-              "$url" -o "/tmp/subs/raw_$i.txt" || { echo "::warning::订阅 #$i 拉取失败，跳过"; continue; }
-            # 只打印格式特征，不打印订阅内容或节点凭据
+            # UA 轮换：不同机场对被屏蔽的 UA 反应不同，逐个尝试直到拿到非空响应
+            got=0
+            for ua in 'Clash/v1.18.0' 'Clash-verge/v1.6.0' 'mihomo/1.19.0' \
+                      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36'; do
+              code="$(curl -sSL --max-time 60 -A "$ua" -w '%{http_code}' \
+                        "$url" -o "/tmp/subs/raw_$i.txt" || echo 000)"
+              sz="$(wc -c < "/tmp/subs/raw_$i.txt" 2>/dev/null || echo 0)"
+              echo "  UA=${ua%%/*} HTTP=$code 字节=$sz"
+              if [ "$code" = "200" ] && [ "${sz:-0}" -gt 100 ]; then got=1; break; fi
+            done
+            if [ "$got" != "1" ]; then echo "::warning::订阅 #$i 所有 UA 均失败，跳过"; continue; fi
+            # 只打印格式特征（二进制安全），不打印订阅内容或节点凭据
             python3 -c "
-          import sys,base64,re
-          t=open('/tmp/subs/raw_$i.txt',encoding='utf-8',errors='replace').read().strip()
-          info='订阅 #$i: 字节=%d' % len(t)
-          if t.startswith('proxies:') or 'proxies:' in t[:500]:
+          import sys,re
+          sys.path.insert(0,'tools')
+          from sub_to_clash import deep_decode
+          b=open('/tmp/subs/raw_$i.txt','rb').read()
+          d=deep_decode(b)
+          info='订阅 #$i: 原始字节=%d 解码后字符=%d' % (len(b),len(d))
+          if 'proxies:' in d[:2000]:
             info+=' 格式=Clash-YAML'
           else:
-            try:
-              import gzip
-              raw=base64.b64decode(t+'='*(-len(t)%4))
-              if raw[:2]==b'\x1f\x8b':
-                raw=gzip.decompress(raw); info+=' [gzip]'
-              d=raw.decode('utf-8','replace')
-              first=next((l for l in d.splitlines() if l.strip()),'')
-              pref=re.match(r'([a-z0-9]+)://',first.lower())
-              info+=' 格式=Base64 解码首行协议=%s' % (pref.group(1) if pref else first[:20])
-            except Exception as e:
-              info+=' 格式=未知(%s)' % str(e)[:40]
+            first=next((l for l in d.splitlines() if l.strip()),'')
+            pref=re.match(r'([a-z0-9]+)://',first.lower())
+            info+=' 格式=URI 解码后首行协议=%s' % (pref.group(1) if pref else first[:16])
           print(info)
           "
             python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
           done <<< "${SUB_URLS}"
           echo "共拉取 $i 个订阅"
-          # 合并所有 proxies_*.yaml 为一个 proxies.yaml
+          # 逐源统计 + 合并所有 proxies_*.yaml（只打印数量，不打印节点/链接）
           python3 - <<'PY'
-          import glob, yaml, os
+          import glob, yaml, os, re
           proxies=[]
           seen=set()
-          for f in sorted(glob.glob('/tmp/subs/proxies_*.yaml')):
+          pat=re.compile(r'(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)',re.I)
+          files=sorted(glob.glob('/tmp/subs/proxies_*.yaml'))
+          print('=== 各订阅解析结果（仅数量）===')
+          for f in files:
+              d=yaml.safe_load(open(f,encoding='utf-8')) or {}
+              ps=d.get('proxies') or []
+              geo=sum(1 for p in ps if pat.search(p.get('name','')))
+              idx=os.path.basename(f).replace('proxies_','').replace('.yaml','')
+              print('  订阅 #%s: 节点 %d 个，其中港台新 %d 个' % (idx,len(ps),geo))
+          for f in files:
               d=yaml.safe_load(open(f,encoding='utf-8')) or {}
               for p in (d.get('proxies') or []):
                   n=p.get('name')
                   if n and n not in seen:
                       seen.add(n); proxies.append(p)
-          # 写出合并后的 proxies 段
           import sys
           sys.path.insert(0,'tools')
           from sub_to_clash import to_yaml
@@ -129,6 +146,11 @@ jobs:
               print('::error::解析出的节点不足 3 个，订阅格式可能不支持')
               sys.exit(1)
           PY
+          # 自检模式：只解析、不跑批、不提交
+          if [ "${{ inputs.probe_only }}" = "true" ]; then
+            echo "=== 自检模式完成：3 源解析已验证，不跑批不提交 ==="
+            exit 0
+          fi
           # 拼装最终 config.yaml：内嵌 proxies + 港台新节点显式列表组 + 规则
           # 注意：mihomo 的 load-balance 组用 filter 时必须配 use(provider)，
           # 对内嵌 proxies 不能直接用 filter（报 "use or proxies missing"），
@@ -163,6 +185,7 @@ jobs:
           PY
 
       - name: 启动 mihomo 并验证连通性（零东财请求）
+        if: inputs.probe_only != true
         run: |
           set -euo pipefail
           /tmp/mihomo -d /tmp/mihomo-conf > /tmp/mihomo.log 2>&1 &
@@ -196,7 +219,8 @@ jobs:
           fi
           echo "港台新节点 $COUNT 个，连通性与节点过滤均通过"
 
-      - name: 【实战】纯东财全量（注入代理，30并发/10分钟硬闸，不提交）
+      - name: 【实战】纯东财全量（注入代理，30并发/10分钟硬闸）
+        if: inputs.probe_only != true
         env:
           BREADTH_SOURCE: eastmoney      # 强制纯东财源（默认 tencent 会被护栏挡）
           BREADTH_WORKERS: '30'          # 激进并发：48 节点 load-balance 分摊，单节点请求少
@@ -228,7 +252,46 @@ jobs:
           except Exception as e:
             print('结果读取失败:',e)
           PY
-          echo "本 workflow 不提交任何数据，线上 breadth/sse 不受影响"
+          echo "实战完成，进入数据提交步骤"
+
+      - name: 提交数据（带护栏，异常拒绝覆盖线上）
+        if: inputs.probe_only != true
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('breadth/data/breadth.json',encoding='utf-8'))
+          m=d.get('meta',{})
+          u=m.get('universe'); n=len(d.get('dates',[]))
+          print('待提交: universe=%s 交易日=%s 末日=%s stale=%s reason=%s'%(
+            u,n,d.get('dates',[None])[-1],m.get('stale'),m.get('stale_reason')))
+          # 护栏1：股票池/交易日数量
+          if not u or u<5000 or n<700:
+              raise SystemExit('拒绝提交：股票池或交易日过少')
+          # 护栏2：stale 标记（风控异常）
+          if m.get('stale'):
+              raise SystemExit('拒绝提交：meta.stale=%s reason=%s'%(m['stale'],m.get('stale_reason')))
+          # 护栏3：时区/交易日字段
+          if not m.get('generated_tz') or not m.get('trade_date'):
+              raise SystemExit('拒绝提交：meta 缺时区/交易日')
+          # 护栏4：sse 与 breadth 同日
+          s=json.load(open('breadth/data/sse.json',encoding='utf-8'))
+          if s['meta'].get('to')!=m.get('trade_date'):
+              raise SystemExit('拒绝提交：sse末日 %s != breadth交易日 %s'%(s['meta'].get('to'),m.get('trade_date')))
+          print('护栏全部通过：数据完整且同日')
+          PY
+          git config user.name "breadth-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain -- breadth/data/breadth.json breadth/data/sse.json)" ]; then
+            echo "数据无变化，跳过提交"
+          else
+            git add breadth/data/breadth.json breadth/data/sse.json
+            git commit -m "data: 机场代理东财全量 $(TZ=Asia/Shanghai date +%Y-%m-%d) 市场宽度+上证日K"
+            # 先 commit 再 pull --rebase（有本地提交时 rebase 才不会因 unstaged 失败）
+            git pull --rebase origin main || { echo "::warning::rebase 冲突，保留本地提交"; }
+            git push
+            echo "已提交 breadth.json + sse.json 到 main"
+          fi
 
       - name: 清理 mihomo（always）
         if: always()

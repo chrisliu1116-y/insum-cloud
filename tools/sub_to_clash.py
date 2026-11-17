@@ -286,11 +286,67 @@ def to_yaml(nodes):
                 out.append('    %s: %s' % (k, _scalar(v)))
     return '\n'.join(out) + '\n'
 
+def deep_decode(data):
+    """迭代剥掉 base64 / gzip / deflate 混合编码层，返回可读文本。
+
+    机场订阅的编码组合五花八门：base64(纯文本)、base64(gzip(文本))、
+    gzip(base64(文本))、甚至 zlib 压缩。这里从原始【字节】出发，
+    每轮按魔数/字符集识别并剥一层，最多 8 轮，直到文本里出现
+    可识别的节点协议或 YAML 结构。
+    """
+    import zlib
+    if isinstance(data, str):
+        data = data.encode('utf-8', 'replace')
+    seen = set()
+    for _ in range(8):
+        if not data:
+            break
+        sig = data[:4]
+        # 1) gzip 魔数 1f8b
+        if data[:2] == b'\x1f\x8b':
+            try:
+                import gzip
+                out = gzip.decompress(data)
+                if out != data and out[:4] not in seen:
+                    seen.add(out[:4]); data = out; continue
+            except Exception:
+                pass
+        # 2) zlib 魔数 78xx (78 01/9c/da/5e)
+        if data[0] == 0x78 and data[1] in (0x01, 0x9c, 0xda, 0x5e):
+            try:
+                out = zlib.decompress(data)
+                if out != data and out[:4] not in seen:
+                    seen.add(out[:4]); data = out; continue
+            except Exception:
+                pass
+        # 3) 看起来是 base64（只含 base64 字符、够长）→ 解码
+        stripped = re.sub(rb'\s+', b'', data)
+        if (len(stripped) >= 24 and
+                re.fullmatch(rb'[A-Za-z0-9+/=_%-]+', stripped)):
+            try:
+                pad = stripped + b'=' * (-len(stripped) % 4)
+                out = base64.b64decode(pad, validate=True)
+                if out and out != data and out[:4] not in seen:
+                    seen.add(out[:4]); data = out; continue
+            except Exception:
+                pass
+        break
+    # 最终转文本
+    txt = data.decode('utf-8', 'replace')
+    # 若仍有替换字符且是 latin 可读，尝试 latin-1
+    if '\ufffd' in txt:
+        alt = data.decode('latin-1', 'replace')
+        if alt.count('\ufffd') < txt.count('\ufffd'):
+            txt = alt
+    return txt
+
 def main():
     if len(sys.argv) < 3:
         print('usage: python sub_to_clash.py <input> <output>', file=sys.stderr)
         sys.exit(2)
-    raw = open(sys.argv[1], 'r', encoding='utf-8', errors='replace').read()
+    # 二进制读取，保留 gzip/zlib 魔数（文本模式会破坏二进制）
+    raw_bytes = open(sys.argv[1], 'rb').read()
+    raw = deep_decode(raw_bytes)
     nodes = convert(raw)
     open(sys.argv[2], 'w', encoding='utf-8').write(to_yaml(nodes))
     from collections import Counter

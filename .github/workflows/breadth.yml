@@ -67,8 +67,8 @@ concurrency:
 # source=eastmoney / no_probe=true 覆盖。用户口径：切到东财后日常也一次性跑完、
 # 不用探针（探针探不通也跑不成，止损靠 watchdog/熔断/护栏）。
 env:
-  DEFAULT_SOURCE: tencent       # 切源脚本改：tencent <-> eastmoney
-  DEFAULT_NO_PROBE: 'false'     # 切到 eastmoney 时改为 'true'（日常也不探针）
+  DEFAULT_SOURCE: eastmoney     # 2026-11-18 正式转正东财（机场代理出口，见「启动机场代理」步骤）
+  DEFAULT_NO_PROBE: 'true'      # 东财走代理已验证零失败，探针浪费请求，日常关闭（止损靠 watchdog/熔断/护栏）
 
 jobs:
   run:
@@ -138,6 +138,14 @@ jobs:
         if: steps.probe.outputs.ready != 'false'
         run: python tools/test_sse_snapshot.py
 
+      - name: 启动机场代理（仅东财源；腾讯源直连）
+        id: agent_proxy
+        if: steps.probe.outputs.ready != 'false' && (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney'
+        env:
+          SUB_URLS: ${{ secrets.SUB_URLS }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash tools/start_proxy.sh
+
       - name: 跑批
         if: steps.probe.outputs.ready != 'false'
         env:
@@ -145,7 +153,7 @@ jobs:
           # 东财原样配置 = 4 并发 + 120~220ms 抖动 + retries1 + 80 根增量，一次连续跑完；
           # 腾讯 = 32 并发 + 140 令牌桶。两套都不再默认带探针（no_probe 见下）。
           BREADTH_SOURCE: ${{ inputs.source || env.DEFAULT_SOURCE }}
-          BREADTH_WORKERS: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '4' || '32' }}
+          BREADTH_WORKERS: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '30' || '32' }}  # 东财30并发甜点(代理48节点分摊)
           BREADTH_RATE: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '0' || '140' }}  # 东财0=禁用令牌桶
           BREADTH_MAX_RUN_SEC: '600'   # watchdog 总时长硬闸（10min），杜绝无限跑（平台10min强杀兜底）
           BREADTH_STALL_SEC: '120'     # 进度 120s 无增长即急停
@@ -158,6 +166,15 @@ jobs:
           NO_PROBE: ${{ inputs.no_probe || env.DEFAULT_NO_PROBE == 'true' }}
         run: |
           set -euo pipefail
+          # 东财源走机场代理（上一步已启动 127.0.0.1:7890）；腾讯源直连
+          if [ "${BREADTH_SOURCE}" = "eastmoney" ]; then
+            export HTTP_PROXY="http://127.0.0.1:7890"
+            export HTTPS_PROXY="http://127.0.0.1:7890"
+            echo ">>> 东财源：经机场代理 7890 出口"
+          else
+            unset HTTP_PROXY HTTPS_PROXY || true
+            echo ">>> 腾讯源：直连"
+          fi
           ARGS="--out breadth/data/breadth.json"
           if [ -n "${SINCE:-}" ]; then ARGS="$ARGS --fresh --since $SINCE"; fi
           if [ -n "${LIMIT:-}" ]; then ARGS="$ARGS --limit $LIMIT --fresh"; fi
@@ -247,4 +264,13 @@ jobs:
       - name: 失败诊断
         if: failure()
         run: |
-          echo "::warning::跑批失败。常见原因：① 东财对 GitHub 机房 IP 限流；② 收盘数据尚未就绪（脚本等 45 分钟仍没等到）。"
+          echo "::warning::跑批失败。常见原因：① 机场代理节点波动（检查 start_proxy 日志）；② 收盘数据尚未就绪（脚本等 45 分钟仍没等到）。"
+
+      - name: 清理机场代理（always）
+        if: always()
+        run: |
+          if [ -f /tmp/mihomo.pid ]; then kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true; fi
+          pkill -f '/tmp/mihomo' 2>/dev/null || true
+          rm -f /tmp/mihomo /tmp/mihomo.log /tmp/mihomo.pid
+          find /tmp/subs /tmp/mihomo-conf -type f -delete 2>/dev/null || true
+          echo "mihomo 与临时文件已清理"

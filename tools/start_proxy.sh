@@ -62,7 +62,16 @@ feat=['原始%d字%d'%(len(b),len(d)),'gzip=%s'%(b[:2]==b'\x1f\x8b'),
 for proto in ['ss','vmess','vless','trojan','hysteria2']:
     feat.append('%s=%d'%(proto,d.lower().count(proto+'://')))
 feat.append('html=%s'%bool(re.search(r'<(html|!doctype|body)',d[:500],re.I)))
+feat.append('json=%s'%(d.lstrip()[:1] in ('{','[')))
+feat.append('outbounds=%s'%('outbounds:' in d))
 print('订阅#$i 特征: '+' '.join(feat))
+keys=[]
+for ln in d.splitlines()[:60]:
+    s=ln.strip()
+    if ':' in s and not s.startswith(('http','ss://','vmess://','vless://','trojan://')):
+        k=s.split(':',1)[0].strip()
+        if k and len(k)<30 and k not in keys: keys.append(k)
+print('订阅#$i 顶层键名(无值):',keys[:12])
 "
   python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
 done <<< "${SUB_URLS}"

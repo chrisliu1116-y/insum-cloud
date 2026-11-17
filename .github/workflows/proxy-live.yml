@@ -244,6 +244,17 @@ jobs:
             echo "已提交 breadth.json + sse.json 到 main"
           fi
 
+      - name: 刷新 jsDelivr CDN 缓存
+        if: inputs.probe_only != true
+        run: |
+          curl -fsS --max-time 20 \
+            "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/breadth/data/breadth.json" \
+            || echo "::warning::breadth purge 失败"
+          curl -fsS --max-time 20 \
+            "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/breadth/data/sse.json" \
+            || echo "::warning::sse purge 失败"
+          echo "CDN 已刷新，前端立即可见新数据"
+
       - name: 清理 mihomo（always）
         if: always()
         run: |

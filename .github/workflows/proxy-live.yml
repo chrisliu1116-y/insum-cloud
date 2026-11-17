@@ -31,17 +31,18 @@ jobs:
           cache: pip
 
       - name: 安装跑批依赖
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pyyaml
 
-      - name: 校验 SUB_URL 已配置（不打印值）
+      - name: 校验 SUB_URLS 已配置（不打印值）
         env:
-          SUB_URL: ${{ secrets.SUB_URL }}
+          SUB_URLS: ${{ secrets.SUB_URLS }}
         run: |
-          if [ -z "${SUB_URL:-}" ]; then
-            echo "::error::SUB_URL secret 未配置，终止"
+          N="$(printf '%s\n' "${SUB_URLS:-}" | grep -c '^https\?://' || true)"
+          if [ "${N:-0}" -lt 1 ]; then
+            echo "::error::SUB_URLS secret 未配置或格式不对（需每行一个 http(s) 订阅链接），终止"
             exit 1
           fi
-          echo "SUB_URL 已配置（长度 ${#SUB_URL}），值不打印"
+          echo "SUB_URLS 已配置：$N 个订阅链接，值不打印"
 
       - name: 下载 mihomo 内核
         env:
@@ -67,36 +68,60 @@ jobs:
           curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
           /tmp/mihomo -v 2>&1 | head -1 || true
 
-      - name: 生成 mihomo 配置（订阅从 Secrets 注入，不打印）
+      - name: 拉订阅并转换为 proxies（本地解析，不外发、不打印订阅内容）
         env:
-          SUB_URL: ${{ secrets.SUB_URL }}
+          SUB_URLS: ${{ secrets.SUB_URLS }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/mihomo-conf
-          cat > /tmp/mihomo-conf/config.yaml <<EOF
+          mkdir -p /tmp/mihomo-conf /tmp/subs
+          # 逐个订阅拉取 -> 本地解析成 Clash proxies（订阅地址只作 curl 参数，不 echo）
+          i=0
+          while IFS= read -r url; do
+            url="$(printf '%s' "$url" | tr -d '\r' | xargs || true)"
+            case "$url" in http://*|https://*) ;; *) continue ;; esac
+            i=$((i+1))
+            echo "拉取订阅 #$i ..."
+            curl -fsSL --max-time 60 \
+              -H 'User-Agent: Clash/v1.18.0' \
+              "$url" -o "/tmp/subs/raw_$i.txt" || { echo "::warning::订阅 #$i 拉取失败，跳过"; continue; }
+            python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
+          done <<< "${SUB_URLS}"
+          echo "共拉取 $i 个订阅"
+          # 合并所有 proxies_*.yaml 为一个 proxies.yaml
+          python3 - <<'PY'
+          import glob, yaml, os
+          proxies=[]
+          seen=set()
+          for f in sorted(glob.glob('/tmp/subs/proxies_*.yaml')):
+              d=yaml.safe_load(open(f,encoding='utf-8')) or {}
+              for p in (d.get('proxies') or []):
+                  n=p.get('name')
+                  if n and n not in seen:
+                      seen.add(n); proxies.append(p)
+          # 写出合并后的 proxies 段
+          import sys
+          sys.path.insert(0,'tools')
+          from sub_to_clash import to_yaml
+          open('/tmp/subs/proxies_all.yaml','w',encoding='utf-8').write(to_yaml(proxies))
+          print('合并后唯一节点数:',len(proxies))
+          if len(proxies)<3:
+              print('::error::解析出的节点不足 3 个，订阅格式可能不支持')
+              sys.exit(1)
+          PY
+          # 拼装最终 config.yaml：proxies + 本地 filter 组 + 规则
+          cat > /tmp/mihomo-conf/config.yaml <<'EOF'
           mixed-port: 7890
           allow-lan: false
           mode: rule
           log-level: warning
           external-controller: 127.0.0.1:9090
-          proxy-providers:
-            sub:
-              type: http
-              url: "${SUB_URL}"
-              interval: 3600
-              header:
-                User-Agent:
-                  - "Clash/v1.18.0"
-                  - "mihomo/1.18.3"
-              health-check:
-                enable: true
-                interval: 300
-                url: https://cp.cloudflare.com/generate_204
+          health-check:
+            enable: true
+            interval: 300
+            url: https://cp.cloudflare.com/generate_204
           proxy-groups:
             - name: "auto"
               type: load-balance
-              use:
-                - sub
               filter: "(?i)(香港|HK|台湾|TW|新加坡|SG|Hong Kong|Taiwan|Singapore)"
               url: https://cp.cloudflare.com/generate_204
               interval: 300
@@ -104,7 +129,16 @@ jobs:
           rules:
             - MATCH,auto
           EOF
-          echo "配置已生成（含订阅地址，内容不打印）"
+          # 把 proxies 段插到 config.yaml 顶部
+          python3 - <<'PY'
+          cfg=open('/tmp/mihomo-conf/config.yaml',encoding='utf-8').read()
+          proxies=open('/tmp/subs/proxies_all.yaml',encoding='utf-8').read()
+          # proxies 段统一缩进 0（都是顶层），直接拼在 health-check 之前也可；放最前最稳
+          combo=proxies.rstrip()+'\n\n'+cfg
+          open('/tmp/mihomo-conf/config.yaml','w',encoding='utf-8').write(combo)
+          print('config.yaml 已生成（proxies 内嵌，内容不打印）')
+          PY
+          # 校验配置能被 mihomo 解析（下面启动步骤会实际加载）
 
       - name: 启动 mihomo 并验证连通性（零东财请求）
         run: |
@@ -125,14 +159,7 @@ jobs:
             exit 1
           fi
           echo "代理连通 OK（经 7890 拿到 204）"
-          # 列出全部 provider 节点数 + 过滤后节点数（只看名字，不含订阅地址）
-          echo "--- provider 状态 ---"
-          curl -s http://127.0.0.1:9090/providers/proxies \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); \
-              p=d.get('providers',{}).get('sub',{}); \
-              print('provider sub 节点数:',len(p.get('proxies',[]))); \
-              print('provider 名称样本:',[x.get('name') for x in p.get('proxies',[])][:15]); \
-              print('provider 类型:',p.get('type'),'车辆:',p.get('vehicleType'))" || true
+          # 过滤后节点数（auto 组 all = filter 命中的内嵌节点；只看名字，不含订阅地址）
           echo "--- 过滤后(港台新)节点 ---"
           COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto \
             | python3 -c "import sys,json; d=json.load(sys.stdin); a=d.get('all',[]); \

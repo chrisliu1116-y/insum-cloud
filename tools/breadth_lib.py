@@ -11,8 +11,10 @@
 """
 import json
 import math
+import os
 import random
 import time
+from urllib.parse import urlencode, quote
 
 # v357【统一 Chrome TLS 指纹】（2026-11-15 用户要求）
 # GitHub 东财跑批全部走 curl_cffi，彻底不再使用 Python 原生 urllib / 普通
@@ -41,6 +43,23 @@ SESSION = requests.Session(impersonate="chrome120")
 SESSION.headers.update(UA)
 HTTP_BACKEND = "curl_cffi/chrome120"
 
+# vPROXY【CF 反代出口】2026-11-18 用户要求评估「GitHub 跑批 + Cloudflare Workers
+# 透明反代」架构：东财对 GHA(Azure) 机房 IP 段限流，改由 CF 边缘节点(AS13335)出口。
+# 链路：GitHub Actions →(本 SESSION)→ CF Worker /__proxy?u=<url> →(CF fetch)→ 东财。
+# 本机零东财请求（dispatch 只发 GitHub API）；GHA→CF 段仍用 chrome120 指纹无所谓，
+# CF→东财 段由 worker.js handleProxy 带 Chrome UA + Referer。
+# 环境变量 EM_PROXY_WORKER 为空 = 关闭，行为与原来一字不差（默认关闭）。
+# worker.js 已内置 /__proxy 白名单路由（PROXY_ALLOW 含 eastmoney.com），无需改 worker。
+EM_PROXY_WORKER = os.environ.get("EM_PROXY_WORKER", "").strip().rstrip("/")
+
+
+def _proxy_url(url, params):
+    """把东财 url+params 包成 CF Worker /__proxy?u=<完整目标URL>；未开启则原样返回。"""
+    if not EM_PROXY_WORKER or "eastmoney.com" not in url:
+        return url, params
+    full = url + ("&" if "?" in url else "?") + urlencode(params)
+    return EM_PROXY_WORKER + "/__proxy?u=" + quote(full, safe=""), None
+
 
 def _get(url, params, retries=1, timeout=15):
     """v361【风控第一原则：失败不重试】
@@ -54,7 +73,8 @@ def _get(url, params, retries=1, timeout=15):
             # v354：间隔下限由 120ms 提到 150ms（用户要求低并发 ≥150ms），
             # 峰值仍压在 ~4 并发 / 5~7 req/s，避免刚解封的 IP 再被风控。
             time.sleep(random.uniform(0.15, 0.22))
-            r = SESSION.get(url, params=params, timeout=timeout)
+            req_url, req_params = _proxy_url(url, params)
+            r = SESSION.get(req_url, params=req_params, timeout=timeout)
             if r.status_code == 200:
                 return r.json()
             if r.status_code == 429:

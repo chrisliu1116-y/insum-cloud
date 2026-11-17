@@ -162,8 +162,15 @@ def parse_uri_proxy(url, seen, scheme):
     if scheme in ('hysteria2', 'hy2'):
         out = {'name': uniq_name(name or 'HY-%s' % host, seen),
                'type': 'hysteria2', 'server': host, 'port': port,
-               'password': urllib.parse.unquote(u.username) or qv('auth', ''), 'udp': True}
+               'password': urllib.parse.unquote(u.username) or qv('auth', ''), 'udp': True,
+               'skip-cert-verify': True}
         if qv('sni'): out['sni'] = qv('sni')
+        alpn = qv('alpn')
+        if alpn:
+            out['alpn'] = [a for a in alpn.split(',') if a]
+        # 带宽字段（可选，机场常带）
+        for key in ('up', 'down'):
+            if qv(key): out[key] = qv(key)
         return out
     return None
 
@@ -224,29 +231,49 @@ def convert(raw_text):
                 break
     return nodes
 
+def _scalar(v):
+    """标量序列化：bool/数字原样，其余加引号。"""
+    if isinstance(v, bool):
+        return 'true' if v else 'false'
+    if isinstance(v, (int, float)):
+        return str(v)
+    return '"%s"' % str(v).replace('"', "'")
+
 def to_yaml(nodes):
-    # 手写 YAML，避免 PyYAML 的中文/特殊字符转义问题
+    # 手写 YAML：关键要正确处理 list（alpn 等必须是真数组，写成字符串会导致
+    # mihomo 报 "'alpn' is not a slice" 直接加载失败）。
     out = ['proxies:']
     for p in nodes:
         out.append('  - name: "%s"' % str(p.get('name', '')).replace('"', "'"))
         for k, v in p.items():
             if k == 'name':
                 continue
-            if isinstance(v, bool):
-                out.append('    %s: %s' % (k, 'true' if v else 'false'))
-            elif isinstance(v, (int, float)):
-                out.append('    %s: %s' % (k, v))
+            if isinstance(v, list):
+                # 顶层列表：alpn: ["h3","http/1.1"]
+                inner = ', '.join(_scalar(x) for x in v)
+                out.append('    %s: [%s]' % (k, inner))
             elif isinstance(v, dict):
                 out.append('    %s:' % k)
                 for kk, vv in v.items():
-                    if isinstance(vv, dict):
+                    if isinstance(vv, (dict, list)):
                         out.append('      %s:' % kk)
-                        for kkk, vvv in vv.items():
-                            out.append('        %s: "%s"' % (kkk, str(vvv)))
+                        if isinstance(vv, list):
+                            for item in vv:
+                                if isinstance(item, dict):
+                                    first = True
+                                    for ik, iv in item.items():
+                                        prefix = '        - ' if first else '          '
+                                        out.append('%s%s: %s' % (prefix, ik, _scalar(iv)))
+                                        first = False
+                                else:
+                                    out.append('        - %s' % _scalar(item))
+                        else:
+                            for kkk, vvv in vv.items():
+                                out.append('        %s: %s' % (kkk, _scalar(vvv)))
                     else:
-                        out.append('      %s: "%s"' % (kk, str(vv)))
+                        out.append('      %s: %s' % (kk, _scalar(vv)))
             else:
-                out.append('    %s: "%s"' % (k, str(v).replace('"', "'")))
+                out.append('    %s: %s' % (k, _scalar(v)))
     return '\n'.join(out) + '\n'
 
 def main():

@@ -84,6 +84,23 @@ jobs:
             curl -fsSL --max-time 60 \
               -H 'User-Agent: Clash/v1.18.0' \
               "$url" -o "/tmp/subs/raw_$i.txt" || { echo "::warning::订阅 #$i 拉取失败，跳过"; continue; }
+            # 只打印格式特征，不打印订阅内容或节点凭据
+            python3 -c "
+          import sys,base64,re
+          t=open('/tmp/subs/raw_$i.txt',encoding='utf-8',errors='replace').read().strip()
+          info='订阅 #$i: 字节=%d' % len(t)
+          if t.startswith('proxies:') or 'proxies:' in t[:500]:
+            info+=' 格式=Clash-YAML'
+          else:
+            try:
+              d=base64.b64decode(t+'='*(-len(t)%4)).decode('utf-8','replace')
+              first=next((l for l in d.splitlines() if l.strip()),'')
+              pref=re.match(r'([a-z0-9]+)://',first.lower())
+              info+=' 格式=Base64 解码首行协议=%s' % (pref.group(1) if pref else first[:20])
+            except Exception as e:
+              info+=' 格式=未知(%s)' % str(e)[:40]
+          print(info)
+          "
             python3 tools/sub_to_clash.py "/tmp/subs/raw_$i.txt" "/tmp/subs/proxies_$i.yaml"
           done <<< "${SUB_URLS}"
           echo "共拉取 $i 个订阅"

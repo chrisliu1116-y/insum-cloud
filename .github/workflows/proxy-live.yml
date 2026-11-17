@@ -54,9 +54,10 @@ jobs:
             https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
             | python3 -c 'import sys,json; d=json.load(sys.stdin); \
               a=[x["browser_download_url"] for x in d["assets"] \
-                 if "linux-amd64-compatible" in x["name"] and x["name"].endswith(".gz")]; \
+                 if "linux-amd64" in x["name"] and "compatible" not in x["name"] \
+                 and x["name"].endswith(".gz")]; \
               a=a or [x["browser_download_url"] for x in d["assets"] \
-                 if "linux-amd64" in x["name"] and x["name"].endswith(".gz")]; \
+                 if "linux-amd64-compatible" in x["name"] and x["name"].endswith(".gz")]; \
               print(a[0] if a else "")')"
           if [ -z "$URL" ]; then
             echo "::error::无法获取 mihomo 下载地址"
@@ -124,12 +125,31 @@ jobs:
             exit 1
           fi
           echo "代理连通 OK（经 7890 拿到 204）"
-          # 列出过滤出的节点（只看名字，不含订阅地址）
-          curl -s http://127.0.0.1:9090/proxies/auto \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); a=d.get('all',[]); print('过滤后节点数:',len(a)); print('节点:',a[:20])"
+          # 列出全部 provider 节点数 + 过滤后节点数（只看名字，不含订阅地址）
+          echo "--- provider 状态 ---"
+          curl -s http://127.0.0.1:9090/providers/proxies \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); \
+              p=d.get('providers',{}).get('sub',{}); \
+              print('provider sub 节点数:',len(p.get('proxies',[]))); \
+              print('provider 名称样本:',[x.get('name') for x in p.get('proxies',[])][:15]); \
+              print('provider 类型:',p.get('type'),'车辆:',p.get('vehicleType'))" || true
+          echo "--- 过滤后(港台新)节点 ---"
+          COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); a=d.get('all',[]); \
+              print('过滤后节点数:',len(a)); print('节点:',a[:20]); print('COUNT='+str(len(a)),file=sys.stderr)" \
+            2>/tmp/node_count.txt | head -2)"
+          COUNT="$(grep -oP 'COUNT=\K\d+' /tmp/node_count.txt || echo 0)"
+          echo "$COUNT 个港台新节点通过过滤"
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::过滤后港台新节点数 $COUNT < 3，订阅未正确加载"
+            echo "--- mihomo.log 末尾 ---"; tail -40 /tmp/mihomo.log || true
+            exit 1
+          fi
+          echo "港台新节点 $COUNT 个，连通性与节点过滤均通过"
 
       - name: 【实战】纯东财全量（注入代理，5分钟硬闸，不提交）
         env:
+          BREADTH_SOURCE: eastmoney      # 强制纯东财源（默认 tencent 会被护栏挡）
           HTTP_PROXY: http://127.0.0.1:7890
           HTTPS_PROXY: http://127.0.0.1:7890
         run: |

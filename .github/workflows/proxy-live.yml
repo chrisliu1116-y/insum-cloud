@@ -93,7 +93,11 @@ jobs:
             info+=' 格式=Clash-YAML'
           else:
             try:
-              d=base64.b64decode(t+'='*(-len(t)%4)).decode('utf-8','replace')
+              import gzip
+              raw=base64.b64decode(t+'='*(-len(t)%4))
+              if raw[:2]==b'\x1f\x8b':
+                raw=gzip.decompress(raw); info+=' [gzip]'
+              d=raw.decode('utf-8','replace')
               first=next((l for l in d.splitlines() if l.strip()),'')
               pref=re.match(r'([a-z0-9]+)://',first.lower())
               info+=' 格式=Base64 解码首行协议=%s' % (pref.group(1) if pref else first[:20])

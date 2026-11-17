@@ -196,6 +196,16 @@ def extract_from_yaml(text):
     except Exception:
         return []
 
+def maybe_gunzip(data):
+    """gzip magic 1f8b 则解压（机场订阅常 gzip 后再 base64）。"""
+    if data[:2] == b'\x1f\x8b':
+        try:
+            import gzip
+            return gzip.decompress(data)
+        except Exception:
+            return data
+    return data
+
 def convert(raw_text):
     text = raw_text.strip()
     nodes = []
@@ -208,8 +218,8 @@ def convert(raw_text):
                 p['name'] = uniq_name(p.get('name'), seen)
                 nodes.append(p)
         return nodes
-    # 2) 尝试整体 base64 解码
-    decoded = b64decode(text).decode('utf-8', 'replace')
+    # 2) 尝试整体 base64 解码（含 gzip 压缩的订阅）
+    decoded = maybe_gunzip(b64decode(text)).decode('utf-8', 'replace')
     lines = []
     for candidate in (decoded, text):
         ls = [l.strip() for l in candidate.splitlines() if l.strip()]

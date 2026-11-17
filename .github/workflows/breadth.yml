@@ -54,14 +54,6 @@ on:
         description: '跳过跑批前的2个东财探针请求(clist+kline)直接一次跑完；周日恢复探测用（用户2026-11-17决定）'
         type: boolean
         default: false
-      proxy_worker:
-        description: 'CF Worker 反代地址(如 https://macropulse-edge.xxx.workers.dev)；留空=直连东财。全部东财请求经它转发，出口为CF边缘IP'
-        required: false
-        default: ''
-      force:
-        description: '强制跑：绕过「北京15:00后」收盘探针放行（凌晨/非交易时段验证反代用）'
-        type: boolean
-        default: false
 
 permissions:
   contents: write                # 需要把 JSON 提交回仓库
@@ -94,7 +86,7 @@ jobs:
       # 15:00 前 / 非交易日不跑；真正的 wait_ready 在脚本里还有一层。
       - name: 收盘数据就绪探针
         id: probe
-        if: inputs.limit == '' && inputs.since == '' && inputs.force != true
+        if: inputs.limit == '' && inputs.since == ''
         run: |
           python3 - <<'PY'
           import os
@@ -163,7 +155,6 @@ jobs:
           RECHECK: ${{ inputs.recheck }}
           FIX_LAST: ${{ inputs.fix_last }}
           NO_PROBE: ${{ inputs.no_probe || env.DEFAULT_NO_PROBE == 'true' }}
-          EM_PROXY_WORKER: ${{ inputs.proxy_worker }}
         run: |
           set -euo pipefail
           ARGS="--out breadth/data/breadth.json"

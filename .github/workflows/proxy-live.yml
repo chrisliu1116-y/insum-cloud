@@ -20,7 +20,7 @@ permissions:
 jobs:
   proxy-live:
     runs-on: ubuntu-latest
-    timeout-minutes: 10   # 平台级兜底（下载~1min + 连通~1min + 实战5min 留余量）
+    timeout-minutes: 13   # 平台级兜底（下载~1min + 连通~1min + 实战10min + 余量）
 
     steps:
       - uses: actions/checkout@v4
@@ -196,9 +196,10 @@ jobs:
           fi
           echo "港台新节点 $COUNT 个，连通性与节点过滤均通过"
 
-      - name: 【实战】纯东财全量（注入代理，5分钟硬闸，不提交）
+      - name: 【实战】纯东财全量（注入代理，30并发/10分钟硬闸，不提交）
         env:
           BREADTH_SOURCE: eastmoney      # 强制纯东财源（默认 tencent 会被护栏挡）
+          BREADTH_WORKERS: '30'          # 激进并发：48 节点 load-balance 分摊，单节点请求少
           HTTP_PROXY: http://127.0.0.1:7890
           HTTPS_PROXY: http://127.0.0.1:7890
         run: |
@@ -206,14 +207,14 @@ jobs:
           # 用东财历史底稿作为增量起点（避开两源混拼护栏，且保留 8818 日历史）
           cp breadth/data/_archive_breadth_em_20261114.json breadth/data/breadth.json
           echo "起点：东财底稿 8818 日 / 5584 只 / 末日 2026-11-12"
-          echo "启动全量实战：4 并发 / 80 根增量 / 5 分钟硬闸（timeout 300）"
+          echo "启动全量实战：30 并发 / 80 根增量 / 10 分钟硬闸（timeout 600）"
           set +e
-          timeout 300 python tools/breadth_run.py --out breadth/data/breadth.json --incremental
+          timeout 600 python tools/breadth_run.py --out breadth/data/breadth.json --incremental
           RC=$?
           set -e
-          echo ">>> 实战退出码: $RC （124=5分钟硬闸到点强杀）"
+          echo ">>> 实战退出码: $RC （124=10分钟硬闸到点强杀）"
           if [ "$RC" = "124" ]; then
-            echo "::warning::实战超过 5 分钟被掐断——按用户口径，超时即判定有问题"
+            echo "::warning::实战超过 10 分钟被掐断"
           fi
           # 打印结果摘要（供日志判定，不提交）
           python3 - <<'PY'

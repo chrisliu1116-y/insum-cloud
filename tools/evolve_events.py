@@ -114,11 +114,12 @@ def evolve(card, news, odds, yesterday, do_llm=True):
         # 后处理：去序号标记（LLM 偶尔加 ①②③）
         summary = re.sub(r'[①②③④⑤]', '', out.get('summary', '')).strip()
         out['summary'] = summary
-        # 字数超标自动二次重写一次（带明确反馈），仍超才标注
+        # 字数不在区间(过短或过长)自动二次重写一次，仍不合格才标注
         slen = len(summary)
         if not (80 <= slen <= 110):
-            fix_prompt = (prompt + '\n\n【重写指令】你上次输出的简介有 %d 字，'
-                          '请重写成严格 80~110 字的一段话（不用序号），只输出完整 JSON。' % slen)
+            direction = '补充具体细节' if slen < 80 else '删减修饰词'
+            fix_prompt = (prompt + '\n\n【重写指令】你上次输出的简介只有 %d 字，'
+                          '请%s，重写成严格 80~110 字的一段话（不用序号），只输出完整 JSON。' % (slen, direction))
             try:
                 text2, ch2 = chat([{'role': 'system', 'content': SYS},
                                    {'role': 'user', 'content': fix_prompt}], max_tokens=700)

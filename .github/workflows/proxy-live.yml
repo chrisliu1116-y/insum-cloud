@@ -88,6 +88,8 @@ jobs:
           set -euo pipefail
           /tmp/mihomo -d /tmp/mihomo-conf > /tmp/mihomo.log 2>&1 &
           echo $! > /tmp/mihomo.pid
+          # v433：provider 首次拉取偶发 EOF，0 节点的强制刷新重试（最多5次×4s）
+          python3 tools/ensure_providers.py
           # 等订阅拉取 + 节点健康检查
           OK=0
           for i in $(seq 1 30); do

@@ -59,6 +59,8 @@ echo "[proxy] 原生配置已生成：3 个 provider，auto 组用亚太 filter 
 echo "[proxy] 启动 mihomo 并验证连通性（仅 Cloudflare，零东财）"
 /tmp/mihomo -d /tmp/mihomo-conf > /tmp/mihomo.log 2>&1 &
 echo $! > /tmp/mihomo.pid
+# v433：provider 首次拉取偶发 EOF，0 节点的强制刷新重试（最多5次×4s）
+python3 tools/ensure_providers.py
 OK=0
 for i in $(seq 1 30); do
   code=$(curl -s -o /dev/null -w "%{http_code}" -x http://127.0.0.1:7890 \

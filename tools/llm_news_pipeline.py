@@ -102,8 +102,12 @@ card_id 只能是 iran / fed / ukraine / apec / none。必须命中该卡 core_s
 
 【七、输出格式（硬要求）】
 只输出一个 JSON 数组，不要 markdown 代码块、不要解释、不要前后缀。长度必须等于输入条数，按输入顺序，每条一个对象：
-{"title_idx":0,"level":"B","category":"宏观数据","card_id":"none","is_dup":false,"dup_of":null,"reason":"极简判据≤15字"}
-level 只能 S/A/B/C；is_dup 只能 true/false；重复时 dup_of 填更早那条 title_idx，否则 null；category 用简短中文分类；reason 必须给出可复现的判据而非复述标题。
+{"id":0,"title_prefix":"美国财政部修改","level":"B","category":"宏观数据","card_id":"none","is_dup":false,"dup_of":null,"reason":"极简判据≤15字"}
+· id：必须原样回传输入那条前面的序号数字，绝不能错——这是防止理由串到别条新闻上的关键。
+· title_prefix：必须原样抄输入那条标题的前 8 个字（不足则全抄），用于逐条对齐校验。
+· level 只能 S/A/B/C；is_dup 只能 true/false；dup_of 填更早那条的 id，否则 null。
+· category 用简短中文分类；reason 必须给出**这一条**的判据（≤15字），绝不能写隔壁那条的理由。
+每写一条，先在心里核对：这条的 id/title_prefix 是否和输入对得上？理由是不是在说这一条？对不上就是严重错误。
 """
 
 
@@ -111,12 +115,15 @@ def build_user_prompt(batch):
     """batch: [{idx, title, brief, src}, ...]"""
     lines = []
     for it in batch:
-        line = '%d. [%s] %s' % (it['idx'], it.get('src') or '未知源', it['title'][:140])
+        # 把前8字显式列出，逼 LLM 逐条对齐（防理由串位）
+        prefix = it['title'][:8]
+        line = '%d. [%s] 前缀「%s」%s' % (it['idx'], it.get('src') or '未知源', prefix, it['title'][:140])
         if it.get('brief'):
             line += '\n   正文：' + it['brief'][:220]
         lines.append(line)
     return ('【待判新闻·共 %d 条】今天是 2026-11-18。\n%s\n\n'
-            '请逐条判定，严格输出 %d 个对象的 JSON 数组，不要任何额外文字。'
+            '请逐条判定，严格输出 %d 个对象的 JSON 数组。每条必须原样回传 id 和前缀「」里的8个字，'
+            '理由只针对这一条，不要任何额外文字。'
             % (len(batch), '\n'.join(lines), len(batch)))
 
 
@@ -200,6 +207,31 @@ _A_PAT = re.compile(
 _S_PAT = re.compile(r'停战协议|和平协议|停火协议.*(?:签署|生效)|贸易战.*(?:结束|终止)|'
                     r'降息50个基点|加息50个基点|纳指.*跌超4%|标普.*跌超4%')
 
+# v2【硬核确定性白名单·锁死A】用户采纳：命中即锁A以上，LLM 不许降级。
+# 只锁两类「事实本身」：①央行货币政策工具的正式操作；②核心经济体核心数据的发布事实。
+# 刻意不锁「官员讲话提及」「机构预测」「数据前瞻」——那些正是要 LLM 降噪的假A。
+_HARD_A_CB = re.compile(
+    r'(?:央行|美联储|欧洲央行|日本央行|英国央行)'
+    r'(?:宣布|开展|实施|进行|决定|下调|上调|维持)'
+    r'[^。]{0,20}(?:买断式逆回购|逆回购|MLF|SLF|降准|降息|加息|再贷款|vt?回购|'
+    r'利率决议|基准利率|存款利率|公开市场操作)',
+    re.I)
+_HARD_A_DATA = re.compile(
+    r'(?:美国|欧元区|德国|法国|英国|日本|中国)'
+    r'[^。]{0,10}(?:\d+月)?'
+    r'(?:非农就业|CPI|核心CPI|PPI|GDP|零售销售|失业率)'
+    r'[^。]{0,16}(?:公布|发布|出炉|数据|升至|降至|录得|同比|环比)')
+# 讲话/前瞻/预测/点评类，命中则即便含上述词也不锁（防止假A被白名单放过）
+_HARD_A_EXCL = re.compile(r'讲话|表态|表示|称|预计|预期|预测|前瞻|展望|点评|解读|分析|或将|有望|拟')
+
+def hard_lock_level(title):
+    """命中硬白名单返回 'A'（锁死），否则 None。用于 LLM 出口强制覆盖。"""
+    if _HARD_A_EXCL.search(title):
+        return None
+    if _HARD_A_CB.search(title) or _HARD_A_DATA.search(title):
+        return 'A'
+    return None
+
 
 def local_rule_judge(batch):
     """纯 Python 简化规则，仅作 LLM 全挂时的兜底；返回逐条结果列表。"""
@@ -273,36 +305,68 @@ def grade_batch(batch, max_tokens=5000, use_llm=True, verbose=True):
             print('[pipeline] JSON 解析失败，本批回退 local-rule')
         return local_rule_judge(batch), ch + '(parse-failed)', text
 
-    # LLM 有时给批内序号(0..n-1)，有时给全局序号(start..start+n-1)，两种都接受
+    # v2：优先用新字段 id，兼容旧 title_idx；两种序号制(批内/全局)都接受。
+    # 关键：title_prefix 必须与输入标题前8字对得上——对不上说明 LLM 串行错位，
+    # 该条理由不可信 → 整条降级 local-rule 并标 align-fail（用户采纳的双保险）。
     start = batch[0]['idx']
     n = len(batch)
     by_pos = {}
     for order, item in enumerate(parsed):
         if not isinstance(item, dict):
             continue
+        raw_id = item.get('id', item.get('title_idx'))
         try:
-            k = int(item.get('title_idx'))
+            k = int(raw_id)
         except (TypeError, ValueError):
             k = -1
         if 0 <= k < n:
             pos = k
         elif start <= k < start + n:
             pos = k - start
-        elif len(parsed) == n:            # 没写 idx 但数量对得上 → 按顺序认领
+        elif len(parsed) == n:            # 没写 id 但数量对得上 → 按顺序认领
             pos = order
         else:
             continue
         by_pos[pos] = item
 
+    # 预先算本地规则结果，供 align-fail / filled 降级用
+    local_by_idx = {x['title_idx']: x for x in local_rule_judge(batch)}
+
     results = []
+    align_fail_n = 0
     for pos, it in enumerate(batch):
         r = by_pos.get(pos)
         filled = not isinstance(r, dict)
         if filled:
             r = {}
+        # 对齐校验：用「公共前缀≥6字」判定，容忍 LLM 少抄1-2字，只拦真串位。
+        # 真串位(如 以色列AI入侵 写成 拍卖)前缀完全不同→公共前缀0→降级。
+        prefix_got = str(r.get('title_prefix', '')).strip()
+        prefix_want = str(it['title'][:8]).strip()
+        def _common_prefix(a, b):
+            n = 0
+            for x, y in zip(a, b):
+                if x != y: break
+                n += 1
+            return n
+        # 老模型无此字段时不误伤；有字段但公共前缀<6才判失败
+        aligned = (not prefix_got) or (_common_prefix(prefix_got, prefix_want) >= 6)
+        if not aligned or filled:
+            if not filled:
+                align_fail_n += 1
+                if verbose:
+                    print('[pipeline] align-fail idx=%s got=%r want=%r → local-rule'
+                          % (it['idx'], prefix_got[:8], prefix_want))
+            r = local_by_idx.get(it['idx'], {})
         lv = str(r.get('level', 'B')).strip().upper()
         if lv not in LEVELS:
             lv = 'B'
+        # 硬白名单锁死：命中央行正式操作/核心数据发布事实 → 强制 A，LLM 不能降级
+        lock = hard_lock_level(it['title'])
+        locked = False
+        if lock and LEVELS.index(lv) < LEVELS.index(lock):
+            lv = lock
+            locked = True
         card = str(r.get('card_id', 'none')).strip().lower()
         if card not in CHANNELS:
             card = 'none'
@@ -327,8 +391,12 @@ def grade_batch(batch, max_tokens=5000, use_llm=True, verbose=True):
             'is_dup': dup and dup_of is not None,
             'dup_of': dup_of,
             'reason': str(r.get('reason') or '').strip().replace('\n', ' ')[:40],
-            'channel': ch + '(filled)' if filled else ch,
+            'channel': (ch + '(hard-A)') if locked
+                       else (ch + '(align-fail)') if (not aligned and not filled)
+                       else (ch + '(filled)') if filled else ch,
         })
+    if align_fail_n and verbose:
+        print('[pipeline] 本批对齐失败 %d 条(已降级local-rule)' % align_fail_n)
     return results, ch, text
 
 
@@ -342,7 +410,7 @@ def load_sample(path, limit=0):
     return data
 
 
-def run(sample, batch_size=15, max_tokens=5000, use_llm=True, verbose=True):
+def run(sample, batch_size=12, max_tokens=5000, use_llm=True, verbose=True):
     results, meta_batches, raws = [], [], []
     t0 = time.time()
     in_chars = sum(len(SYS_PROMPT) for _ in range((len(sample) + batch_size - 1) // batch_size))
@@ -364,6 +432,29 @@ def run(sample, batch_size=15, max_tokens=5000, use_llm=True, verbose=True):
             print('[batch %02d] idx %d-%d channel=%s %.1fs' %
                   (len(meta_batches), start, start + len(batch) - 1, ch, time.time() - tb))
     elapsed = time.time() - t0
+    # v2【同源取 max】dup 组级别统一到组内最高：避免「伊朗油轮触雷」两条一条A一条B。
+    # dup_of 指向更早那条 id；把该 id 及其所有 dup 视为一组，级别取组内最高。
+    by_idx = {r['title_idx']: r for r in results}
+    groups = {}
+    for r in results:
+        if r['is_dup'] and r['dup_of'] is not None:
+            root = r['dup_of']
+            groups.setdefault(root, [root]).append(r['title_idx'])
+    max_changed = 0
+    for root, members in groups.items():
+        levels = [by_idx[m]['level'] for m in members if m in by_idx]
+        if not levels:
+            continue
+        top = max(levels, key=lambda x: LEVELS.index(x))
+        for m in members:
+            rr = by_idx.get(m)
+            if rr and rr['level'] != top:
+                rr['level'] = top
+                if 'hard-A' not in rr['channel']:
+                    rr['channel'] = rr['channel'] + '(dup-max)'
+                max_changed += 1
+    if verbose and max_changed:
+        print('[dup-max] %d 条同源级别已统一取最高' % max_changed)
     # 统计
     lv = {k: sum(1 for r in results if r['level'] == k) for k in LEVELS}
     cards = {k: sum(1 for r in results if r['card_id'] == k) for k in CHANNELS}
@@ -375,6 +466,7 @@ def run(sample, batch_size=15, max_tokens=5000, use_llm=True, verbose=True):
         'elapsed_sec': round(elapsed, 2),
         'levels': lv, 'cards': cards, 'channels': channels,
         'dup_count': sum(1 for r in results if r['is_dup']),
+        'dup_max_changed': max_changed,
         'in_chars': in_chars, 'out_chars': out_chars,
         # glm 中文约 1.5 字/token，这里只做量级估算，非账单值
         'est_input_tokens': int(in_chars / 1.5), 'est_output_tokens': int(out_chars / 1.5),
@@ -401,7 +493,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--sample', default=DEFAULT_SAMPLE)
     ap.add_argument('--limit', type=int, default=0, help='只跑前 N 条（小样验证）')
-    ap.add_argument('--batch-size', type=int, default=15)
+    ap.add_argument('--batch-size', type=int, default=12)
     ap.add_argument('--max-tokens', type=int, default=5000)
     ap.add_argument('--no-llm', action='store_true', help='强制本地规则（对照）')
     ap.add_argument('--out', default='')

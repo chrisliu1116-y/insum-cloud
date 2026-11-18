@@ -13,9 +13,13 @@
     gemini-2.5-flash-lite / 2.5-flash（该 key 404 no longer available）。
 
 凭据从环境变量读：ZHIPU_KEY / GEMINI_KEY；绝不打印 key 明文。
+【v2 自动检测】每个通道在调用前检查自己的 key 环境变量：未配置则静默跳过该路
+（不报错、不浪费超时），两路全不可用/全失败时抛 AllModelsFailed，调用方平滑回退
+本地确定性规则。status() 可查每路"已配置/未配置"，供前端状态栏与自检页显示。
 用法：
-  from llm_pool import chat
-  text, channel = chat("把这条新闻判为 S/A/B/C", max_tokens=200)
+  from llm_pool import chat, status
+  text, channel = chat("把这条新闻判为 S/A/B/C", max_tokens=200)  # 全挂抛 AllModelsFailed
+  available = status()  # [{'channel':..., 'configured':bool}, ...]
 """
 import os, json, urllib.request, urllib.error, time
 
@@ -64,20 +68,47 @@ def _gemini(model):
         return d['candidates'][0]['content']['parts'][0]['text'] or '', 'gemini/' + model
     return call
 
-# 有序降级链：按实测速度排；全挂抛 AllModelsFailed → 调用方回退本地规则
+# 有序降级链：按实测速度排；每项 (通道名, 调用函数, 所需key环境变量)
+# 两路 key：ZHIPU_KEY(智谱) / GEMINI_KEY(Google AI Studio)。同一 key 下多模型共用。
 CHANNELS = [
-    ('zhipu/' + ZHIPU_MODEL,          _zhipu(ZHIPU_MODEL)),
-    ('gemini/gemini-flash-lite-latest', _gemini('gemini-flash-lite-latest')),
-    ('gemini/gemini-3.1-flash-lite',    _gemini('gemini-3.1-flash-lite')),
+    ('zhipu/' + ZHIPU_MODEL,            _zhipu(ZHIPU_MODEL),   'ZHIPU_KEY'),
+    ('gemini/gemini-flash-lite-latest', _gemini('gemini-flash-lite-latest'), 'GEMINI_KEY'),
+    ('gemini/gemini-3.1-flash-lite',    _gemini('gemini-3.1-flash-lite'),    'GEMINI_KEY'),
 ]
+
+def _configured(key_env):
+    return bool(os.environ.get(key_env, '').strip())
+
+def status():
+    """返回每路配置状态(不含key明文)，供前端状态栏/自检页显示。
+    返回 [{'channel':..., 'key_env':..., 'configured':bool}, ...] + 兜底项。"""
+    seen = set()
+    out = []
+    for name, _, kv in CHANNELS:
+        provider = name.split('/')[0]
+        if provider in seen:  # 同一 key 的多模型只列一次配置状态
+            continue
+        seen.add(provider)
+        out.append({'channel': provider, 'key_env': kv, 'configured': _configured(kv)})
+    out.append({'channel': 'local-rule', 'key_env': None, 'configured': True})
+    return out
+
+def any_configured():
+    """至少一路 key 已配置 → True。供调用方决定是否值得尝试 LLM。"""
+    return any(_configured(kv) for _, _, kv in CHANNELS)
 
 def chat(messages, max_tokens=300, timeout=30, verbose=True):
     """按序尝试，返回 (text, channel)。channel 供前端状态栏显示。
-    全挂抛 AllModelsFailed（调用方回退本地规则）。"""
+    · 未配置 key 的通道：静默跳过（不报错、不占超时）。
+    · 两路全未配置 或 全部调用失败：抛 AllModelsFailed → 调用方平滑回退本地确定性规则。"""
     if isinstance(messages, str):
         messages = [{'role': 'user', 'content': messages}]
-    errs = []
-    for name, fn in CHANNELS:
+    errs, skipped = [], []
+    for name, fn, key_env in CHANNELS:
+        # 自动检测：该路 key 未配置 → 静默跳过
+        if not _configured(key_env):
+            skipped.append(name)
+            continue
         t = time.time()
         try:
             text, ch = fn(messages, max_tokens, timeout)
@@ -88,11 +119,10 @@ def chat(messages, max_tokens=300, timeout=30, verbose=True):
         except Exception as e:
             errs.append('%s:%s' % (name, type(e).__name__))
         if verbose: print('[llm] %s failed, next' % name)
-    raise AllModelsFailed('; '.join(errs))
-
-def status():
-    """返回通道清单(不含key)，供前端状态栏/自检页显示。"""
-    return [n for n, _ in CHANNELS] + ['local-rule(fallback)']
+    # 区分「全未配置」与「配置了但都失败」，便于调用方日志明确
+    if not errs and skipped:
+        raise AllModelsFailed('all channels skipped (keys not configured): ' + ','.join(skipped))
+    raise AllModelsFailed('; '.join(errs) if errs else 'no channels available')
 
 if __name__ == '__main__':
     print('channels:', status())

@@ -118,7 +118,7 @@ jobs:
         if: inputs.probe_only != true
         env:
           BREADTH_SOURCE: eastmoney      # 强制纯东财源（默认 tencent 会被护栏挡）
-          BREADTH_WORKERS: '30'          # 激进并发：48 节点 load-balance 分摊，单节点请求少
+          BREADTH_WORKERS: '48'          # 48并发(亚太池109节点load-balance分摊,单节点请求少)
           HTTP_PROXY: http://127.0.0.1:7890
           HTTPS_PROXY: http://127.0.0.1:7890
         run: |

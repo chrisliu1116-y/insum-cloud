@@ -7,10 +7,13 @@
 """
 import re
 
-# 亚太地区命中正则（大小写不敏感）
+# 亚太地区命中正则（大小写不敏感）——用户 2026-11-18 定稿完整版
+# 含中文/英文缩写/机场三字码/国旗emoji
 INCLUDE_RE = re.compile(
-    r'(香港|HK|台湾|TW|新加坡|SG|日本|JP|韩国|KR|'
-    r'Hong ?Kong|Taiwan|Singapore|Japan|Korea)', re.I)
+    r'(香港|HK|HKG|🇭🇰|台湾|台北|新北|TW|TPE|🇹🇼|'
+    r'新加坡|狮城|SG|SIN|🇸🇬|'
+    r'日本|东京|大阪|JP|NRT|KIX|🇯🇵|'
+    r'韩国|首尔|KR|ICN|🇰🇷)', re.I)
 
 # 信息提示类伪节点排除正则
 EXCLUDE_RE = re.compile(r'(过期|剩余|流量|官网|重置|到期|续费|余额|套餐|购买|订阅)', re.I)

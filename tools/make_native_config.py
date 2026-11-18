@@ -25,8 +25,15 @@ def main():
                              'url': 'https://cp.cloudflare.com/generate_204'},
         }
         names.append(key)
+    # 亚太近端过滤（用户定稿正则）+ 信息提示节点排除；由核心原生应用，不再手写解析
+    apac = (r'(?i)(香港|HK|HKG|🇭🇰|台湾|台北|新北|TW|TPE|🇹🇼|'
+            r'新加坡|狮城|SG|SIN|🇸🇬|'
+            r'日本|东京|大阪|JP|NRT|KIX|🇯🇵|'
+            r'韩国|首尔|KR|ICN|🇰🇷)')
+    junk = r'(?i)(过期|剩余|流量|官网|重置|到期|续费|余额|套餐|购买|订阅)'
     cfg['proxy-groups'].append({
         'name': 'auto', 'type': 'load-balance', 'use': names,
+        'filter': apac, 'exclude-filter': junk,
         'url': 'https://cp.cloudflare.com/generate_204', 'interval': 300,
         'strategy': 'round-robin',
     })

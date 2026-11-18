@@ -74,66 +74,14 @@ jobs:
           curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
           /tmp/mihomo -v 2>&1 | head -1 || true
 
-      - name: 启动本地 subconverter（Docker，订阅不外发第三方）
-        run: |
-          set -euo pipefail
-          docker run -d --name mp-subconverter -p 127.0.0.1:25500:25500 \
-            tindy2013/subconverter:latest
-          # 等就绪（/version 返回 200）
-          for i in $(seq 1 20); do
-            if curl -fsS --max-time 3 http://127.0.0.1:25500/version >/dev/null 2>&1; then
-              echo "subconverter 就绪"; break
-            fi
-            sleep 2
-          done
-          curl -fsS --max-time 3 http://127.0.0.1:25500/version || \
-            echo "::warning::subconverter 未就绪，订阅将只能用直连解析"
-
-      - name: 拉订阅并转换为 proxies（本地解析，不外发、不打印订阅内容）
+      - name: 生成原生 proxy-providers 配置（核心自己拉取，节点数与本地客户端一致）
         env:
           SUB_URLS: ${{ secrets.SUB_URLS }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/mihomo-conf /tmp/subs
-          # 统一订阅拉取+转换+聚合（直连失败/0节点自动 fallback subconverter；
-          # 仅打印节点数量，绝不打印链接内容或凭据）
-          python3 tools/fetch_subs.py
-          # 自检模式：只解析、不跑批、不提交
-          if [ "${{ inputs.probe_only }}" = "true" ]; then
-            echo "=== 自检模式完成：3 源解析已验证，不跑批不提交 ==="
-            exit 0
-          fi
-          # 拼装最终 config.yaml：内嵌 proxies + 亚太节点显式列表组 + 规则
-          # 注意：mihomo 的 load-balance 组用 filter 时必须配 use(provider)，
-          # 对内嵌 proxies 不能直接用 filter（报 "use or proxies missing"），
-          # 所以这里按正则筛出节点名，显式写进 proxies 列表。
-          python3 - <<'PY'
-          import yaml, sys
-          sys.path.insert(0,'tools')
-          from node_filter import is_apac
-          d=yaml.safe_load(open('/tmp/subs/proxies_all.yaml',encoding='utf-8')) or {}
-          proxies=d.get('proxies') or []
-          picked=[p['name'] for p in proxies if is_apac(p.get('name'))]
-          if len(picked)<3:
-              picked=[p['name'] for p in proxies]   # 兜底：亚太不足就用全部有效节点
-          print('auto 组节点数:',len(picked),'（从',len(proxies),'个有效节点中筛出）')
-          from sub_to_clash import to_yaml, _scalar
-          lines=[to_yaml(proxies).rstrip(), '',
-            'mixed-port: 7890','allow-lan: false','mode: rule','log-level: warning',
-            'external-controller: 127.0.0.1:9090','',
-            'proxy-groups:','  - name: "auto"','    type: load-balance','    proxies:']
-          for n in picked:
-              lines.append('      - %s' % _scalar(n))
-          lines += ['    url: https://cp.cloudflare.com/generate_204',
-                    '    interval: 300','    strategy: round-robin','',
-                    'rules:','  - MATCH,auto','']
-          open('/tmp/mihomo-conf/config.yaml','w',encoding='utf-8').write('\n'.join(lines))
-          print('config.yaml 已生成（auto 组显式列出',len(picked),'个节点）')
-          # 生成后用 PyYAML 自检语法，避免再次到 mihomo 才报错
-          chk=yaml.safe_load(open('/tmp/mihomo-conf/config.yaml',encoding='utf-8'))
-          assert chk.get('proxies') and chk.get('proxy-groups')
-          print('配置自检通过: proxies=%d 组=%d' % (len(chk['proxies']),len(chk['proxy-groups'])))
-          PY
+          mkdir -p /tmp/mihomo-conf
+          python3 tools/make_native_config.py /tmp/mihomo-conf/config.yaml
+          echo "3 个 provider 已配置，auto 组用亚太 filter+exclude 原生过滤"
 
       - name: 启动 mihomo 并验证连通性（零东财请求）
         if: inputs.probe_only != true
@@ -155,20 +103,17 @@ jobs:
             exit 1
           fi
           echo "代理连通 OK（经 7890 拿到 204）"
-          # 过滤后节点数（auto 组 all = filter 命中的内嵌节点；只看名字，不含订阅地址）
-          echo "--- 过滤后(亚太)节点 ---"
-          COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); a=d.get('all',[]); \
-              print('过滤后节点数:',len(a)); print('节点:',a[:20]); print('COUNT='+str(len(a)),file=sys.stderr)" \
-            2>/tmp/node_count.txt | head -2)"
-          COUNT="$(grep -oP 'COUNT=\K\d+' /tmp/node_count.txt || echo 0)"
-          echo "$COUNT 个亚太节点通过过滤"
-          if [ "$COUNT" -lt 3 ]; then
-            echo "::error::过滤后亚太节点数 $COUNT < 3，订阅未正确加载"
-            echo "--- mihomo.log 末尾 ---"; tail -40 /tmp/mihomo.log || true
-            exit 1
-          fi
-          echo "亚太节点 $COUNT 个，连通性与节点过滤均通过"
+          echo "--- 各源原生节点数（核心加载，与本地客户端一致）---"
+          curl -s http://127.0.0.1:9090/providers/proxies | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin).get('providers',{})
+          for k in sorted(x for x in d if x.startswith('up')):
+              print('  源#%s 节点=%d'%(k[2:],len(d[k].get('proxies',[]))))
+          "
+          COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('all',[])))")"
+          echo "auto 组亚太可用 $COUNT 个"
+          if [ "${COUNT:-0}" -lt 3 ]; then echo "::error::亚太节点不足"; tail -30 /tmp/mihomo.log; exit 1; fi
+          echo "亚太节点 $COUNT 个，连通性与过滤均通过"
 
       - name: 【实战】纯东财全量（注入代理，30并发/10分钟硬闸）
         if: inputs.probe_only != true

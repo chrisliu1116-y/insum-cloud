@@ -114,9 +114,21 @@ jobs:
               elif n<3:
                   print('::warning::订阅源#%s 仅 %d 节点（偏少），可能服务端按请求头降级'%(idx,n))
           "
+          echo "--- 出口组状态（v432 亚太主池 + 欧美备用）---"
+          curl -s http://127.0.0.1:9090/proxies | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin).get('proxies',{})
+          for g in ['auto','auto-backup','auto-final']:
+              if g in d:
+                  allp=d[g].get('all',[])
+                  print('  组 %-12s 成员=%d now=%s'%(g,len(allp),str(d[g].get('now',''))[:40]))
+          "
           COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('all',[])))")"
           echo "auto 组亚太可用 $COUNT 个"
           if [ "${COUNT:-0}" -lt 3 ]; then echo "::error::亚太节点不足"; tail -30 /tmp/mihomo.log; exit 1; fi
+          NOW="$(curl -s http://127.0.0.1:9090/proxies/auto-final | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('now',''))")"
+          echo "auto-final 当前选中: $NOW"
+          if [ "$NOW" != "auto" ]; then echo "::warning::最终出口未选中亚太主池(auto)，当前=$NOW——fallback可能误判，注意速度"; fi
           echo "亚太节点 $COUNT 个，连通性与过滤均通过"
 
       - name: 【实战】纯东财全量（注入代理，30并发/10分钟硬闸）

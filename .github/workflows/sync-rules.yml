@@ -1,0 +1,45 @@
+name: Sync Prompt Rules
+# 用户改 docs/分级标准.md 或 去重规则全览.md 并 push 后自动触发：
+#   1) 变更检测（提醒复核 prompt_rules.md 快照）
+#   2) 把当前快照写入 CF KV（mp_prompt_rules），Worker 边缘可读
+# 注意：快照是人工提纯的约1200 token 精简版；脚本只同步不重写，避免注入文档里的源码噪音。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/分级标准.md'
+      - 'docs/去重规则全览.md'
+      - 'prompt_rules.md'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: 规则变更检测
+        run: |
+          python3 tools/build_prompt_rules.py --check || echo "::warning::规则文档已变，请复核 prompt_rules.md 判据后运行 --stamp"
+      - name: 快照大小校验
+        run: |
+          python3 - <<'PY'
+          s=open('prompt_rules.md',encoding='utf-8').read()
+          zh=sum('\u4e00'<=c<='\u9fff' for c in s)
+          est=int(zh/1.5+(len(s)-zh)/2)
+          print('snapshot:',len(s),'chars ~',est,'tokens')
+          assert est<=2200, '规则快照超token预算'
+          print('OK')
+          PY
+      - name: 写入 Cloudflare KV
+        env:
+          CF_TOKEN: ${{ secrets.CF_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CF_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "::warning::CF 凭据未配置，跳过 KV 同步"
+            exit 0
+          fi
+          python3 tools/sync_rules_to_cfkv.py
+          python3 tools/sync_rules_to_cfkv.py --verify

@@ -134,6 +134,19 @@ def try_incubate(candidates, existing_themes, verbose=True):
         return None, ch, 'JSON解析失败'
     if not d.get('is_new_event'):
         return None, ch, d.get('reason', '判定为无新事件')
+    # 【铁律2·严格模式A】Polymarket 硬门槛：必须有活跃合约才允许建卡。
+    # 用主题名 + 卡片标题 + 快讯高频词作搜索关键词（GHA 直连 gamma-api，带429退避）。
+    try:
+        from polymarket_gate import find_active_contract
+        kws = [str(d.get('theme', '')), str(d.get('title', ''))]
+        kws += [n.get('title', '')[:10] for n in candidates[:2]]
+        kws = [k for k in kws if k][:4]
+        poly = find_active_contract(kws, verbose=verbose)
+    except Exception as e:
+        poly = None
+        if verbose: print('[incubate] Polymarket 门槛异常(%s)→拒绝建卡' % type(e).__name__)
+    if not poly:
+        return None, ch + '(no-poly-contract)', '无Polymarket活跃合约(严格模式拒绝建卡)'
     # 字段校验 + 兜底
     # v2【铁律4】lead 首句按语义点截断到≤45字（照抄 evolve_events 的方案，不硬切词）
     lead = str(d.get('lead', '')).strip()
@@ -186,7 +199,13 @@ def try_incubate(candidates, existing_themes, verbose=True):
         'facts': [n.get('title', '') for n in candidates[:5]],
         # v2【铁律3】全要素：关联ticker + newsKeys + pred占位(第三步由gamma-api填)
         'tickers': tickers,
-        'pred': None,   # 第三步：Polymarket 硬门槛命中后填入合约四元组
+        'pred': {   # 铁律2：Polymarket 硬门槛命中后填入真实合约四元组
+            'q': poly.get('slug', ''), 'event': poly.get('events', ''),
+            'market': (poly.get('outcomes') or [{}])[0].get('market_question', ''),
+            'outcome': (poly.get('outcomes') or [{}])[0].get('outcome', 'Yes'),
+        },
+        'polymarket': {'title': poly.get('title'), 'volume': poly.get('volume'),
+                       'slug': poly.get('slug'), 'matched_at': time.strftime('%Y-%m-%d %H:%M')},
         'newsKeys': [str(x) for x in d.get('newsKeys', [])[:6]],
         'newsExcl': [str(x) for x in d.get('exclude_noise', [])[:4]],
         'trigger_news': [{'title': n.get('title', ''), 'level': n.get('level', '?'),

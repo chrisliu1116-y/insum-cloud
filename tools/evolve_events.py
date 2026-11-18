@@ -57,16 +57,26 @@ SYS = """你是金融终端的事件情报编辑。严格按以下规则，把�
 {
   "status": "4~6字阶段气泡，直接反映当前真实阶段(如 多国政要抵华/首轮结束·休会/12月加息几成定局)",
   "progress_line": "当前态势：阶段定性 + 最新核心动作(废除机械天数累加)",
-  "summary": "80~110字三段式：①当前推进到哪个具体阶段 ②最新达成的会谈/动作/成果或卡在什么分歧 ③结合提供的赔率/行情收尾。三段用句号分隔，全文80~110字",
+  "lead": "首句：≤45字，直接给当前阶段定性+最核心实质结果(例：谈判僵持：伊朗两日计划待美方回应)",
+  "rest": "后续句：展开分歧卡点/细节/赔率，与lead拼成完整简介",
   "facts": ["有效事实1", "有效事实2"],
   "noisy_dropped": ["被剔除的噪音标题(最多3条)"],
   "archived": false
 }
+【倒金字塔·首句铁律】首页卡片列表只显示简介前两行(约42~45字)。lead 字段必须≤45字，是一个短判断句，直接给「当前阶段定性+最核心实质结果」。参考写法(照此风格)：
+  · "12月加息几成定局：CME定价升至96.8%"
+  · "战俘交换达成共识，下轮会谈日期仍未定"
+  · "APEC今日开幕，19日中俄美元首将历史首会"
+lead 绝不能塞进多个事实、绝不能超45字。rest 字段再展开分歧卡点、细节背景、赔率/行情。代码会把 lead+rest 拼成完整 summary。绝不把最重要结果埋在后面。
+【弹性长度·按信息密度自适应】全文 40~160 字，不要死卡固定字数：
+  · 有实质进展/多方会谈/重大协议落地 → 写 130~160 字，把具体成果与分歧交代清楚；
+  · 休会/无新进展 → 40~60 字精炼交代现状与最新定价即可，严禁为凑字数写空话套话。
+  信息量决定长度，不是长度决定信息量。
 【归档】仅当事实确认事件彻底落幕(峰会闭幕/协议签署)或终局合约结算才 archived=true。
 【赔率】用输入里给出的 Polymarket/行情数字，不要编造；没有就写"暂无明确终局定价"。
 【时态准确·硬要求】严格按新闻原文时态和日期：新闻写"11月19日将举行"而今天是11月18日，就绝不能说成"已举行"，必须写"将于19日举行"或"明日举行"；"有望达成"不能说成"已签署"；"达成意向"不能说成"正式签署"。进行中的事件写明"进行中/待举行"，严禁把未来或进行中的事说成已完成——这是事实性错误。今天是2026-11-18。
-【格式·硬要求】summary 是连续的一段话，用中文句号分隔三句，**绝不使用 ①②③ 或任何序号/列表符号**。
-【字数·硬要求】summary 必须 80~110 个中文字符（含标点）。写完后自己数字数：少于80补细节，多于110删修饰词，必须落在区间内再输出。"""
+【格式·硬要求】summary 是连续的一段话，用中文句号分隔，**绝不使用 ①②③ 或任何序号/列表符号**。
+【长度自检】写完后自己数字数，必须落在 40~160 字区间；重点是首句≤45字且含核心结果，而不是凑到某个固定字数。"""
 
 def build_user_prompt(card, facts_text, odds_text, yesterday):
     sc = SCOPES[card]
@@ -111,30 +121,55 @@ def evolve(card, news, odds, yesterday, do_llm=True):
             fallback['model_channel'] = ch + '(parse-failed)'
             return fallback
         out['model_channel'] = ch
-        # 后处理：去序号标记（LLM 偶尔加 ①②③）
-        summary = re.sub(r'[①②③④⑤]', '', out.get('summary', '')).strip()
+        # v432：优先用 lead(首句) + rest 拼接，代码层强制首句≤45字铁律
+        lead = re.sub(r'[①②③④⑤]', '', out.get('lead', '')).strip()
+        rest = re.sub(r'[①②③④⑤]', '', out.get('rest', '')).strip()
+        if lead:
+            if len(lead) > 45:
+                # 超长：按逗号/顿号截到最后一个≤45字的语义点，不硬切词
+                cut = None
+                for sep in ['，', '；', '、', ' ']:
+                    idx = lead.rfind(sep, 0, 46)
+                    if idx > 15:
+                        cut = lead[:idx]
+                        break
+                lead = (cut or lead[:45]).rstrip('，；、 ') + '…'
+            if not lead.endswith(('。', '！', '？', '…')):
+                lead += '。'
+            out['_lead_truncated'] = len(out.get('lead','')) > 45
+            summary = (lead + rest).strip()
+        else:
+            summary = re.sub(r'[①②③④⑤]', '', out.get('summary', '')).strip()
         out['summary'] = summary
-        # 字数不在区间(过短或过长)自动二次重写一次，仍不合格才标注
+        # 弹性长度校验：40~160 字；首句铁律：第一句≤45字且含核心结果
         slen = len(summary)
-        if not (80 <= slen <= 110):
-            direction = '补充具体细节' if slen < 80 else '删减修饰词'
-            fix_prompt = (prompt + '\n\n【重写指令】你上次输出的简介只有 %d 字，'
-                          '请%s，重写成严格 80~110 字的一段话（不用序号），只输出完整 JSON。' % (slen, direction))
+        first_sent = re.split(r'[。！？]', summary)[0]
+        first_len = len(first_sent)
+        need_fix = not (40 <= slen <= 160) or first_len > 45
+        if need_fix:
+            problems = []
+            if slen < 40: problems.append('全文只有%d字(太短,至少40)' % slen)
+            if slen > 160: problems.append('全文%d字(太长,最多160)' % slen)
+            if first_len > 45: problems.append('第一句%d字(超过45字铁律,首句必须直接给核心结果)' % first_len)
+            fix_prompt = (prompt + '\n\n【重写指令】你上次输出有问题：' + '；'.join(problems)
+                          + '。请按倒金字塔重写：第一句≤45字直接给核心结果，全文40~160字按信息密度自适应，只输出完整JSON。')
             try:
                 text2, ch2 = chat([{'role': 'system', 'content': SYS},
                                    {'role': 'user', 'content': fix_prompt}], max_tokens=700)
                 out2 = extract_json(text2)
                 if out2 and out2.get('summary'):
                     s2 = re.sub(r'[①②③④⑤]', '', out2['summary']).strip()
-                    if 80 <= len(s2) <= 110:
+                    fs2 = len(re.split(r'[。！？]', s2)[0])
+                    if 40 <= len(s2) <= 160 and fs2 <= 45:
                         out['summary'] = s2
                         out['model_channel'] = ch2 + '(rewritten)'
-                        slen = len(s2)
+                        slen, first_len = len(s2), fs2
             except Exception:
                 pass
         out['_summary_len'] = slen
-        if not (80 <= slen <= 110):
-            out['_warn'] = 'summary %d chars (target 80-110)' % slen
+        out['_first_sent_len'] = first_len
+        if not (40 <= slen <= 160) or first_len > 45:
+            out['_warn'] = 'summary %d chars, first sentence %d chars (target 40-160, first<=45)' % (slen, first_len)
         return out
     except AllModelsFailed as e:
         fallback['model_channel'] = 'local-rule(all-llm-failed)'
@@ -174,8 +209,9 @@ def main():
             yesterday = SCOPES[cid]['core_subject']
         out = evolve(cid, news_map.get(cid, []), odds_default[cid], yesterday, not a.no_llm)
         result['cards'][cid] = out
-        print('[%s] channel=%s status=%s summary_len=%s' % (
-            cid, out.get('model_channel'), out.get('status'), out.get('_summary_len')))
+        print('[%s] channel=%s status=%s len=%s first=%s' % (
+            cid, out.get('model_channel'), out.get('status'),
+            out.get('_summary_len'), out.get('_first_sent_len')))
 
     with open(a.out, 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)

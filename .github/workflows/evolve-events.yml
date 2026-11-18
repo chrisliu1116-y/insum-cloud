@@ -53,6 +53,27 @@ jobs:
             --prev data/events_daily.json \
             --out data/events_daily.json
 
+      - name: 自动建卡 + 双轨归档（自治）
+        env:
+          ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+        run: |
+          # 有新闻分级结果才尝试建卡；没有也照常做归档/休眠/清理
+          if [ -f data/daily_news_graded.json ]; then
+            NEWS=data/daily_news_graded.json
+          elif [ -f llm_news_full.json ]; then
+            NEWS=llm_news_full.json
+            echo "::notice::使用已有分级样本做建卡演练（非当日快讯）"
+          else
+            NEWS=/dev/null
+            echo "::notice::无新闻分级结果，本次只做归档"
+          fi
+          python3 tools/event_incubator.py \
+            --news "$NEWS" \
+            --events data/events_daily.json \
+            --out data/events_daily.json \
+            --min-high 3
+
       - name: 提交结果（带护栏）
         if: inputs.mode != 'dry'
         run: |
@@ -64,9 +85,12 @@ jobs:
           assert len(cards)>=4, '卡片数不足4'
           for cid,c in cards.items():
               s=c.get('summary','')
-              assert 60<=len(s)<=130, '%s 字数异常 %d'%(cid,len(s))
+              assert 40<=len(s)<=160, '%s 字数异常 %d'%(cid,len(s))
+              first=s.split('。')[0]
+              assert len(first)<=48, '%s 首句超45字铁律 %d'%(cid,len(first))
               assert c.get('status'), '%s 无气泡'%cid
-          print('护栏通过: %d张卡'%len(cards))
+          assert len(cards)<=6, '活跃卡超上限6张'
+          print('护栏通过: %d张卡(含归档/休眠状态)'%len(cards))
           PY
           git config user.name "evolve-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

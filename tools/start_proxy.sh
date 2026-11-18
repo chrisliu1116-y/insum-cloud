@@ -75,8 +75,12 @@ curl -s http://127.0.0.1:9090/providers/proxies \
 import sys,json
 d=json.load(sys.stdin).get('providers',{})
 for k in sorted(x for x in d if x.startswith('up')):
-    ps=d[k].get('proxies',[])
-    print('  源#%s 节点=%d'%(k[2:],len(ps)))
+    ps=d[k].get('proxies',[]); n=len(ps); idx=k[2:]
+    print('  源#%s 节点=%d'%(idx,n))
+    if n==0:
+        print('::warning::订阅源#%s 解析出 0 个节点——该订阅链接可能已失效/需鉴权，请检查 SUB_URLS 第%s 行'%(idx,idx))
+    elif n<3:
+        print('::warning::订阅源#%s 仅 %d 个节点（偏少），可能服务端按请求头降级下发'%(idx,n))
 "
 COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('all',[])))")"

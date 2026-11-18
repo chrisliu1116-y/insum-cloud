@@ -28,6 +28,36 @@ MAX_ACTIVE = 6
 DORMANT_DAYS = 7
 ARCHIVE_CLEAN_DAYS = 14
 
+# v2【铁律1：原因vs结果白名单隔离】纯行情波动/单点数据 → 禁止独立建卡。
+# 只有「有后续阶段演变的持续性事件」才配建卡；价格结果是事件的下游，不是事件本身。
+_NEG_MARKET = re.compile(
+    r'(?:大涨|大跌|暴涨|暴跌|涨超|跌超|涨幅|跌幅|反弹|回调|跳水|拉升|冲高|回落|'
+    r'失守|重回|站上|逼近|跌破|突破|创新高|创新低|新高|新低|历史新高|'
+    r'收涨|收跌|盘前涨|盘前跌|盘中涨|盘中跌|持续冲高|持续走高)'
+    r'\s*\d*(?:\.\d+)?\s*%?')
+_NEG_DATA_POINT = re.compile(
+    r'(?:非农|CPI|PPI|GDP|零售销售|失业率|贸易帐|财报|季报|年报|业绩)'
+    r'[^。]{0,12}(?:公布|发布|出炉|数据|超预期|不及预期)')
+# 持续性事件的「原因」特征词——命中这些才说明是博弈进程，不是价格结果
+_POS_PROCESS = re.compile(
+    r'战争|冲突|开战|停火|停战|谈判|会谈|峰会|会晤| Summit|关税|贸易战|制裁|'
+    r'封锁|海峡|加息周期|降息周期|利率决议|大选|选举|弹劾|政变|协议|条约|'
+    r'制裁清单|出口管制|军事|部署|撤离|签署|生效|重启|破裂')
+
+# v2【铁律3：ticker 白名单】新卡的关联资产必须从 U.get() 支持的代码里选，
+# LLM 不许编造。这里列项目已支持的主流 ticker（与 assets/js/universe.js 对齐）。
+TICKER_WHITELIST = [
+    'BRENT', 'WTI', 'GOLD', 'SILVER', 'US10Y', 'US2Y', 'DXY', 'USDCNH',
+    'HS300', 'HSI', 'SPX', 'NDX', 'NVDA', 'AAPL', 'TSLA', 'BTC',
+]
+
+def is_pure_market_noise(title):
+    """纯行情/单点数据判定：命中负面清单且无持续性事件特征 → True（禁止建卡）。"""
+    neg = bool(_NEG_MARKET.search(title) or _NEG_DATA_POINT.search(title))
+    pos = bool(_POS_PROCESS.search(title))
+    return neg and not pos
+
+
 INCUBATOR_SYS = """你是事件追踪编辑。判断一组快讯是否构成一个值得单独建卡的新事件。
 
 【输入】若干条"未归属任何现有卡"的高优快讯（S级或核心A级）。
@@ -43,8 +73,12 @@ INCUBATOR_SYS = """你是事件追踪编辑。判断一组快讯是否构成一�
   "status": "当前阶段气泡(4~8字)",
   "lead": "倒金字塔首句≤45字，直接给当前阶段定性+最核心结果",
   "rest": "后续句展开，与lead拼成40~160字简介；只用输入事实，绝不编造",
+  "tickers": ["布伦特原油BRENT","黄金GOLD","美债10Y US10Y"] 或 [],
+  "newsKeys": ["高区分度关键词1","关键词2","关键词3"],
   "reason": "判定理由≤30字"
 }
+· tickers：只从这些代码里选最多3个：BRENT/WTI/GOLD/SILVER/US10Y/US2Y/DXY/USDCNH/HS300/HSI/SPX/NDX/NVDA/AAPL/TSLA/BTC；没有直接关联的填 []，绝不编造代码。
+· newsKeys：3~5个用于匹配后续快讯的关键词，必须是该事件主题的高区分度词。
 【严格·is_new_event 只在全部满足时才为 true】
   1) 这些快讯确实在说同一个**有明确事件主体和持续进展**的重大事件；
   2) 与"现有活跃卡主题"明显不同——若属于现有事件(如原油涨跌↔美伊/霍尔木兹卡、利率↔美联储卡)，必须 is_new_event=false，那是现有卡的进展；
@@ -101,12 +135,40 @@ def try_incubate(candidates, existing_themes, verbose=True):
     if not d.get('is_new_event'):
         return None, ch, d.get('reason', '判定为无新事件')
     # 字段校验 + 兜底
+    # v2【铁律4】lead 首句按语义点截断到≤45字（照抄 evolve_events 的方案，不硬切词）
     lead = str(d.get('lead', '')).strip()
     if len(lead) > 45:
-        lead = lead[:45].rstrip('，；、 ') + '…'
+        cut = None
+        for sep in ['，', '；', '：', '、', ' ']:
+            idx = lead.rfind(sep, 0, 46)
+            if idx > 15:
+                cut = lead[:idx]
+                break
+        lead = (cut or lead[:45]).rstrip('，；、： ') + '…'
     if lead and not lead.endswith(('。', '！', '？', '…')):
         lead += '。'
     rest = str(d.get('rest', '')).strip()
+    # v2【铁律3】tickers 从白名单过滤，杜绝 LLM 编造代码
+    raw_tickers = d.get('tickers', [])
+    tickers = []
+    if isinstance(raw_tickers, list):
+        for t in raw_tickers:
+            code = re.sub(r'[^A-Za-z0-9]', '', str(t)).upper()
+            # 从字符串里抠白名单代码（如「布伦特原油BRENT」→ BRENT）
+            for w in TICKER_WHITELIST:
+                if w in code and w not in tickers:
+                    tickers.append(w)
+            if code in TICKER_WHITELIST and code not in tickers:
+                tickers.append(code)
+        tickers = tickers[:3]
+    # v2【铁律3】全要素校验：缺核心要素 → 拒绝空壳卡
+    missing = []
+    if not str(d.get('core_subject', '')).strip(): missing.append('core_subject')
+    if not (isinstance(d.get('stage_focus'), list) and d['stage_focus']): missing.append('stage_focus')
+    if not (isinstance(d.get('newsKeys'), list) and d['newsKeys']): missing.append('newsKeys')
+    if not lead: missing.append('lead')
+    if missing:
+        return None, ch, '空壳卡要素缺失: ' + ','.join(missing)
     card = {
         'id': 'auto_' + re.sub(r'[^a-z0-9]+', '', str(d.get('theme', 'new')).lower())[:10] + str(int(time.time()))[-4:],
         'icon': str(d.get('icon', '📌'))[:4],
@@ -122,6 +184,13 @@ def try_incubate(candidates, existing_themes, verbose=True):
         'lead': lead, 'rest': rest, 'summary': (lead + rest).strip(),
         'progress_line': '当前态势：' + str(d.get('status', '新事件')),
         'facts': [n.get('title', '') for n in candidates[:5]],
+        # v2【铁律3】全要素：关联ticker + newsKeys + pred占位(第三步由gamma-api填)
+        'tickers': tickers,
+        'pred': None,   # 第三步：Polymarket 硬门槛命中后填入合约四元组
+        'newsKeys': [str(x) for x in d.get('newsKeys', [])[:6]],
+        'newsExcl': [str(x) for x in d.get('exclude_noise', [])[:4]],
+        'trigger_news': [{'title': n.get('title', ''), 'level': n.get('level', '?'),
+                          'idx': n.get('idx')} for n in candidates[:5]],
         'noisy_dropped': [], 'archived': False, 'dormant': False,
         'auto_created': True, 'created_at': time.strftime('%Y-%m-%d %H:%M'),
         'last_active_date': time.strftime('%Y-%m-%d'),
@@ -236,6 +305,17 @@ def main():
         print('[incubate] 跳过：活跃卡已满 %d/%d' % (active_n, MAX_ACTIVE))
     else:
         for theme, cluster in qualified.items():
+            # v2【铁律1硬拦截】整组都是纯行情/单点数据 → 连 LLM 都不用调，直接驳回
+            neg_titles = [n['title'] for n in cluster if is_pure_market_noise(n['title'])]
+            # ≥50% 是纯行情/单点数据 → 整组驳回（原油组 3/4、贵金属组 3/4 都在此拦下）
+            if len(neg_titles) / len(cluster) >= 0.5:
+                ilog.append({'date': time.strftime('%Y-%m-%d'), 'theme': theme,
+                             'n_candidates': len(cluster), 'decision': 'rejected',
+                             'reason': '纯行情/单点数据占比%d%%(负面清单硬拦截)' % round(len(neg_titles)/len(cluster)*100),
+                             'rejected_titles': neg_titles[:3]})
+                print('[incubate] 主题[%s]驳回：纯行情占比%d%%(负面清单)'
+                      % (theme, round(len(neg_titles)/len(cluster)*100)))
+                continue
             card, ch, reason = try_incubate(cluster, existing_themes)
             ilog.append({'date': time.strftime('%Y-%m-%d'), 'theme': theme, 'n_candidates': len(cluster),
                          'decision': 'created' if card else 'rejected', 'reason': reason, 'channel': ch})

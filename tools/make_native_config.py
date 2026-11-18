@@ -13,7 +13,7 @@ def main():
         'log-level': 'info', 'external-controller': '127.0.0.1:9090',
         'proxy-providers': {},
         'proxy-groups': [],
-        'rules': ['MATCH,auto'],
+        'rules': ['MATCH,auto-final'],   # v432：最终出口走 fallback（亚太主池优先，全挂切欧美备用）
     }
     names = []
     for i, url in enumerate(urls, 1):
@@ -31,11 +31,33 @@ def main():
             r'日本|东京|大阪|JP|NRT|KIX|🇯🇵|'
             r'韩国|首尔|KR|ICN|🇰🇷)')
     junk = r'(?i)(过期|剩余|流量|官网|重置|到期|续费|余额|套餐|购买|订阅)'
+    # 主池：亚太近端节点（load-balance）
     cfg['proxy-groups'].append({
         'name': 'auto', 'type': 'load-balance', 'use': names,
         'filter': apac, 'exclude-filter': junk,
         'url': 'https://cp.cloudflare.com/generate_204', 'interval': 300,
         'strategy': 'round-robin',
+    })
+    # v432 方案A：欧美/小地区备用池。用 exclude-filter 排除亚太+伪节点（RE2 不支持负向 lookahead，
+    # 但 exclude-filter 是 mihomo 原生字段，等价于「非亚太」）。正常跑批不用它，零影响。
+    # 备用池排除项 = 亚太命中 | 伪节点命中（一个完整正则，避免拼接破坏语义）
+    backup_exclude = (r'(?i)(香港|HK|HKG|🇭🇰|台湾|台北|新北|TW|TPE|🇹🇼|'
+                      r'新加坡|狮城|SG|SIN|🇸🇬|'
+                      r'日本|东京|大阪|JP|NRT|KIX|🇯🇵|'
+                      r'韩国|首尔|KR|ICN|🇰🇷|'
+                      r'过期|剩余|流量|官网|重置|到期|续费|余额|套餐|购买|订阅)')
+    cfg['proxy-groups'].append({
+        'name': 'auto-backup', 'type': 'load-balance', 'use': names,
+        'exclude-filter': backup_exclude,
+        'url': 'https://cp.cloudflare.com/generate_204', 'interval': 300,
+        'strategy': 'round-robin',
+    })
+    # 最终出口：fallback 优先主池，主池全部不可用时才切备用池
+    cfg['proxy-groups'].append({
+        'name': 'auto-final', 'type': 'fallback',
+        'proxies': ['auto', 'auto-backup'],
+        'url': 'https://cp.cloudflare.com/generate_204', 'interval': 60,
+        'fallback-threshold': 50,
     })
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)

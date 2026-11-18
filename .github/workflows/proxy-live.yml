@@ -84,7 +84,6 @@ jobs:
           echo "3 个 provider 已配置，auto 组用亚太 filter+exclude 原生过滤"
 
       - name: 启动 mihomo 并验证连通性（零东财请求）
-        if: inputs.probe_only != true
         run: |
           set -euo pipefail
           /tmp/mihomo -d /tmp/mihomo-conf > /tmp/mihomo.log 2>&1 &

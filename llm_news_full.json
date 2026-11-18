@@ -1,0 +1,3538 @@
+{
+  "meta": {
+    "n": 227,
+    "batch_size": 20,
+    "batches": [
+      {
+        "start": 0,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 24.72,
+        "parsed": true
+      },
+      {
+        "start": 20,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 26.8,
+        "parsed": true
+      },
+      {
+        "start": 40,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 20.24,
+        "parsed": true
+      },
+      {
+        "start": 60,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 26.02,
+        "parsed": true
+      },
+      {
+        "start": 80,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 22.24,
+        "parsed": true
+      },
+      {
+        "start": 100,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 24.9,
+        "parsed": true
+      },
+      {
+        "start": 120,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 22.31,
+        "parsed": true
+      },
+      {
+        "start": 140,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 29.79,
+        "parsed": true
+      },
+      {
+        "start": 160,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 24.62,
+        "parsed": true
+      },
+      {
+        "start": 180,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 23.5,
+        "parsed": true
+      },
+      {
+        "start": 200,
+        "n": 20,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 23.67,
+        "parsed": true
+      },
+      {
+        "start": 220,
+        "n": 7,
+        "channel": "zhipu/glm-4-flash-250414",
+        "sec": 8.89,
+        "parsed": true
+      }
+    ],
+    "elapsed_sec": 277.71,
+    "levels": {
+      "S": 0,
+      "A": 18,
+      "B": 180,
+      "C": 29
+    },
+    "cards": {
+      "iran": 13,
+      "fed": 2,
+      "ukraine": 4,
+      "apec": 1,
+      "none": 207
+    },
+    "channels": {
+      "zhipu/glm-4-flash-250414": 225,
+      "zhipu/glm-4-flash-250414(filled)": 2
+    },
+    "dup_count": 10,
+    "in_chars": 67632,
+    "out_chars": 25665,
+    "est_input_tokens": 45088,
+    "est_output_tokens": 17110
+  },
+  "results": [
+    {
+      "title_idx": 0,
+      "level": "B",
+      "category": "外汇",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "同事件不同媒体表述",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 1,
+      "level": "B",
+      "category": "外汇",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 0,
+      "reason": "同事件不同媒体表述",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 2,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规外交拜会",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 3,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘冲突常规军事行动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 4,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规国家间合作协议",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 5,
+      "level": "A",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "核心商品价格大幅波动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 6,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规地缘制裁措施",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 7,
+      "level": "A",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "核心商品价格大幅波动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 8,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "政治人物表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 9,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规战况报道",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 10,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "ukraine",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规国际会谈",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 11,
+      "level": "B",
+      "category": "公司",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "公司高管回购股份",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 12,
+      "level": "B",
+      "category": "公司",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 11,
+      "reason": "同事件不同媒体表述",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 13,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": true,
+      "dup_of": 8,
+      "reason": "同事件不同媒体表述",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 14,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规政治选举分析",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 15,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "ukraine",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规战况报道",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 16,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "ukraine",
+      "is_dup": true,
+      "dup_of": 10,
+      "reason": "同事件不同媒体表述",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 17,
+      "level": "C",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "政治人物表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 18,
+      "level": "B",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "核心商品价格小幅波动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 19,
+      "level": "C",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规军事部署数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 20,
+      "level": "A",
+      "category": "战略大宗",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "原油运输成本大涨",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 21,
+      "level": "A",
+      "category": "战略大宗",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "布油跌破95美元",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 22,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "以军空袭黎巴嫩",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 23,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "以军打死哈马斯高官",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 24,
+      "level": "A",
+      "category": "战略大宗",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "WTI原油大跌6%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 25,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "民主党建功参院阻特改联储",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 26,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "前美联储官员谈参院制约",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 27,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美延长与伊朗国家紧急状态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 28,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美延长与尼加拉瓜国家紧急状态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 29,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "分析师谈参院屏障",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 30,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "胡塞武装袭沙特机场",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 31,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "巴外长会晤伊朗大使",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 32,
+      "level": "A",
+      "category": "战略大宗",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "布油跌破100美元",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 33,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美EIA数据：石油供应量升",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 34,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "乌总统赴西班牙参会",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 35,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "万斯谈共和党失利原因",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 36,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "万斯谈共和党失利原因",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 37,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美EIA数据：原油库存降至最低",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 38,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美EIA数据：原油库存下降86.5万桶",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 39,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美EIA数据：柴油库存创新低",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 40,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 41,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "冲突进展",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 42,
+      "level": "A",
+      "category": "大宗商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "价格幅度",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 43,
+      "level": "B",
+      "category": "大宗商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 44,
+      "level": "A",
+      "category": "公司动作",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "价格幅度",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 45,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "会议预告",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 46,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "冲突进展",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 47,
+      "level": "A",
+      "category": "大宗商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "价格幅度",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 48,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 49,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 50,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 51,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "风险提示",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 52,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 53,
+      "level": "B",
+      "category": "大宗商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 54,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 55,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "外交活动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 56,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 57,
+      "level": "B",
+      "category": "公司动作",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 58,
+      "level": "A",
+      "category": "公司动作",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "价格幅度",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 59,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 60,
+      "level": "B",
+      "category": "美股异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美股光伏/太阳能概念股异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 61,
+      "level": "A",
+      "category": "美股指数",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "纳指涨超2%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 62,
+      "level": "A",
+      "category": "加密货币",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "比特币涨超2%破79000美元",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 63,
+      "level": "B",
+      "category": "美股指数",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "道指涨超2%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 64,
+      "level": "B",
+      "category": "美股异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美股三大指数高开及个股涨跌",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 65,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "俄称袭击敖德萨港货船",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 66,
+      "level": "B",
+      "category": "商品市场",
+      "card_id": "apec",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "阿联酋考虑建原油管道",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 67,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "欧盟外交官表态支持乌克兰",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 68,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "伊朗称击落美无人机",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 69,
+      "level": "B",
+      "category": "美股异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "道指期货开盘狂飙",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 70,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "胡塞武装打击沙特机场",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 71,
+      "level": "B",
+      "category": "货币政策",
+      "card_id": "fed",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美联储11月3日利率数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 72,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "巴基斯坦与伊朗外交接触进展",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 73,
+      "level": "B",
+      "category": "公司事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "民主党胜选或影响AI数据中心",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 74,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "伊朗最高领袖表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 75,
+      "level": "B",
+      "category": "公司事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "马斯克财富缩水超600亿美元",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 76,
+      "level": "B",
+      "category": "公司事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "马斯克财富持续缩水",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 77,
+      "level": "C",
+      "category": "公司事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "麦当劳称乌克兰冲突影响国际销售额",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 78,
+      "level": "B",
+      "category": "商品市场",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "汇丰上调原油产量预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 79,
+      "level": "B",
+      "category": "货币政策",
+      "card_id": "fed",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美财政部修改国债拍卖指引",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 80,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规拍卖指引调整",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 81,
+      "level": "B",
+      "category": "公司公告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "公司增持公告",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 82,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规拍卖规模公布",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 83,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 82,
+      "reason": "重复拍卖规模",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 84,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规拍卖公告",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 85,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规拍卖公告",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 86,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 84,
+      "reason": "重复拍卖规模",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 87,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 85,
+      "reason": "重复拍卖规模",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 88,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规选举结果公布",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 89,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规盘前新闻汇总",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 90,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规难民政策调整",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 91,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规分析师目标价",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 92,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规政治活动调整",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 93,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规数据播报",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 94,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规数据播报",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 95,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规冲突报道",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 96,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 97,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 98,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 99,
+      "level": "B",
+      "category": "快讯",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "",
+      "channel": "zhipu/glm-4-flash-250414(filled)"
+    },
+    {
+      "title_idx": 100,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 101,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 102,
+      "level": "B",
+      "category": "政策建议",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "政策建议",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 103,
+      "level": "B",
+      "category": "地缘政治",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘政治",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 104,
+      "level": "B",
+      "category": "金融市场",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "金融市场",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 105,
+      "level": "B",
+      "category": "金融市场",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "金融市场",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 106,
+      "level": "B",
+      "category": "金融市场",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "金融市场",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 107,
+      "level": "B",
+      "category": "指数行情",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "指数行情",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 108,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 109,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 110,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 111,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 112,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 113,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 114,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 115,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 116,
+      "level": "B",
+      "category": "观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 117,
+      "level": "A",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "通胀率超阈值",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 118,
+      "level": "B",
+      "category": "地缘政治",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘政治",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 119,
+      "level": "B",
+      "category": "地缘政治",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘政治",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 120,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普表态非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 121,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "GDP数据非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 122,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "军事袭击非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 123,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 124,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 125,
+      "level": "B",
+      "category": "公司公告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美股盘前异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 126,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员通话非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 127,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 128,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 129,
+      "level": "B",
+      "category": "政策发布",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "文件印发",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 130,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "CPI数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 131,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "前总统表态非事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 132,
+      "level": "B",
+      "category": "指数编制",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "指数修订",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 133,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "黄金价格涨超3%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 134,
+      "level": "B",
+      "category": "政策发布",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "买断式逆回购操作",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 135,
+      "level": "B",
+      "category": "政策发布",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "买断式逆回购操作",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 136,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "服务业PMI数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 137,
+      "level": "B",
+      "category": "公司公告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "股权划转完成",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 138,
+      "level": "B",
+      "category": "政策发布",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "文件印发",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 139,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "白银价格涨超4%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 140,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "回应选举舞弊指控",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 141,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "回应选举结果",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 142,
+      "level": "B",
+      "category": "公司公告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "股价异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 143,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "外交表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 144,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 143,
+      "reason": "重复外交表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 145,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "央行政策扩容",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 146,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "ETF成交放量",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 147,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "A股成交额突破",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 148,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "选举舞弊调查进展",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 149,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "伊美分歧难弥合",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 150,
+      "level": "A",
+      "category": "地缘事件",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "霍尔木兹海峡油轮触雷",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 151,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "民众表达移民执法不满",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 152,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "马斯克干预选举表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 153,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "ETF成交额破百亿",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 154,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "选举计票结果预测",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 155,
+      "level": "B",
+      "category": "公司公告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "股价异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 156,
+      "level": "A",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "现货黄金突破4000美元",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 157,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "美股期货跌幅收窄",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 158,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "现货白银涨幅扩大",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 159,
+      "level": "B",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普承认伊朗战事影响选举",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 160,
+      "level": "B",
+      "category": "指数",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "KOSPI跌幅4%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 161,
+      "level": "B",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "国债期货跌0.1%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 162,
+      "level": "A",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "现货黄金涨1.1%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 163,
+      "level": "A",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "黄金股ETF涨超4%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 164,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普谈伊朗协议",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 165,
+      "level": "B",
+      "category": "选举",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "舒默称民主党赢参议院",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 166,
+      "level": "B",
+      "category": "选举",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普称民主党优势",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 167,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普谈伊朗战争",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 168,
+      "level": "B",
+      "category": "选举",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "预测民主党占选举先",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 169,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "早间要闻汇总",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 170,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "伊朗油轮触雷起火",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 171,
+      "level": "B",
+      "category": "企业",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普谈否决权",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 172,
+      "level": "B",
+      "category": "地缘",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "特朗普接受选举结果",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 173,
+      "level": "B",
+      "category": "指数",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "日韩股市跌超4%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 174,
+      "level": "B",
+      "category": "市场",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "ETF两市成交额增",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 175,
+      "level": "B",
+      "category": "商品",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "比特币跌超2%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 176,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "发改委谈水运航道",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 177,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "发改委谈交通投资",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 178,
+      "level": "B",
+      "category": "宏观数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "发改委谈零售总额",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 179,
+      "level": "B",
+      "category": "企业",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "科创板半导体回购超百亿",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 180,
+      "level": "B",
+      "category": "指数异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "核心指数跌幅≥2%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 181,
+      "level": "B",
+      "category": "政策预告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "政策预告",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 182,
+      "level": "B",
+      "category": "地缘评论",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘评论",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 183,
+      "level": "B",
+      "category": "指数异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "核心指数跌幅≥2%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 184,
+      "level": "B",
+      "category": "市场观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "市场观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 185,
+      "level": "B",
+      "category": "央行操作",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规央行操作",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 186,
+      "level": "B",
+      "category": "央行操作",
+      "card_id": "none",
+      "is_dup": true,
+      "dup_of": 185,
+      "reason": "同操作重复播报",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 187,
+      "level": "B",
+      "category": "指数异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "核心指数异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 188,
+      "level": "B",
+      "category": "汇率异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "汇率异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 189,
+      "level": "B",
+      "category": "汇率异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "汇率异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 190,
+      "level": "A",
+      "category": "企业资本动作",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "企业回购金额上调",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 191,
+      "level": "B",
+      "category": "市场统计",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "市场统计",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 192,
+      "level": "B",
+      "category": "市场观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "市场观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 193,
+      "level": "B",
+      "category": "市场观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "市场观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 194,
+      "level": "B",
+      "category": "地缘战况",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘战况",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 195,
+      "level": "B",
+      "category": "地缘战况",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘战况",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 196,
+      "level": "B",
+      "category": "企业资本动作",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "企业回购金额上调",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 197,
+      "level": "B",
+      "category": "地缘评论",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘评论",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 198,
+      "level": "B",
+      "category": "地缘评论",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "地缘评论",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 199,
+      "level": "B",
+      "category": "快讯",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "",
+      "channel": "zhipu/glm-4-flash-250414(filled)"
+    },
+    {
+      "title_idx": 200,
+      "level": "B",
+      "category": "指数异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "非核心指数异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 201,
+      "level": "B",
+      "category": "政治表态",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "领导人表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 202,
+      "level": "B",
+      "category": "政治表态",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "领导人表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 203,
+      "level": "B",
+      "category": "政治表态",
+      "card_id": "iran",
+      "is_dup": true,
+      "dup_of": 202,
+      "reason": "同主体同事件",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 204,
+      "level": "C",
+      "category": "选举进展",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规选举报道",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 205,
+      "level": "B",
+      "category": "市场观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "市场观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 206,
+      "level": "B",
+      "category": "公司异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "公司异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 207,
+      "level": "B",
+      "category": "公司异动",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "公司异动",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 208,
+      "level": "B",
+      "category": "市场政策",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "ETF政策",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 209,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "商品价格",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 210,
+      "level": "B",
+      "category": "地缘表态",
+      "card_id": "ukraine",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "领导人表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 211,
+      "level": "B",
+      "category": "经济数据",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "常规经济数据",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 212,
+      "level": "B",
+      "category": "央行表态",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "央行官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 213,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "商品价格",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 214,
+      "level": "B",
+      "category": "地缘表态",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "领导人表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 215,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "商品价格",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 216,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "商品价格",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 217,
+      "level": "B",
+      "category": "市场观点",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "市场观点",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 218,
+      "level": "B",
+      "category": "地缘表态",
+      "card_id": "iran",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "领导人表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 219,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "商品价格",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 220,
+      "level": "C",
+      "category": "地缘事件",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "观点表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 221,
+      "level": "B",
+      "category": "汇率",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "汇率变动<2%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 222,
+      "level": "B",
+      "category": "货币政策",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 223,
+      "level": "B",
+      "category": "商品价格",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "商品价格变动<5%",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 224,
+      "level": "B",
+      "category": "货币政策",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 225,
+      "level": "B",
+      "category": "货币政策",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "官员表态",
+      "channel": "zhipu/glm-4-flash-250414"
+    },
+    {
+      "title_idx": 226,
+      "level": "B",
+      "category": "公司公告",
+      "card_id": "none",
+      "is_dup": false,
+      "dup_of": null,
+      "reason": "公司回应",
+      "channel": "zhipu/glm-4-flash-250414"
+    }
+  ],
+  "raw_batches": [
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"外汇\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":1,\"reason\":\"同事件不同媒体表述\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"外汇\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":0,\"reason\":\"同事件不同媒体表述\"},\n  {\"title_idx\":2,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规外交拜会\"},\n  {\"title_idx\":3,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘冲突常规军事行动\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规国家间合作协议\"},\n  {\"title_idx\":5,\"level\":\"A\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"核心商品价格大幅波动\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规地缘制裁措施\"},\n  {\"title_idx\":7,\"level\":\"A\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"核心商品价格大幅波动\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"政治人物表态\"},\n  {\"title_idx\":9,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规战况报道\"},\n  {\"title_idx\":10,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"ukraine\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规国际会谈\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"公司\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"公司高管回购股份\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"公司\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":11,\"reason\":\"同事件不同媒体表述\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":true,\"dup_of\":8,\"reason\":\"同事件不同媒体表述\"},\n  {\"title_idx\":14,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规政治选举分析\"},\n  {\"title_idx\":15,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"ukraine\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规战况报道\"},\n  {\"title_idx\":16,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"ukraine\",\"is_dup\":true,\"dup_of\":10,\"reason\":\"同事件不同媒体表述\"},\n  {\"title_idx\":17,\"level\":\"C\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"政治人物表态\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"核心商品价格小幅波动\"},\n  {\"title_idx\":19,\"level\":\"C\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规军事部署数据\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"A\",\"category\":\"战略大宗\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"原油运输成本大涨\"},\n  {\"title_idx\":1,\"level\":\"A\",\"category\":\"战略大宗\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"布油跌破95美元\"},\n  {\"title_idx\":2,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"以军空袭黎巴嫩\"},\n  {\"title_idx\":3,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"以军打死哈马斯高官\"},\n  {\"title_idx\":4,\"level\":\"A\",\"category\":\"战略大宗\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"WTI原油大跌6%\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"民主党建功参院阻特改联储\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"前美联储官员谈参院制约\"},\n  {\"title_idx\":7,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美延长与伊朗国家紧急状态\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美延长与尼加拉瓜国家紧急状态\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"分析师谈参院屏障\"},\n  {\"title_idx\":10,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"胡塞武装袭沙特机场\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"巴外长会晤伊朗大使\"},\n  {\"title_idx\":12,\"level\":\"A\",\"category\":\"战略大宗\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"布油跌破100美元\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美EIA数据：石油供应量升\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"乌总统赴西班牙参会\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"万斯谈共和党失利原因\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"万斯谈共和党失利原因\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美EIA数据：原油库存降至最低\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美EIA数据：原油库存下降86.5万桶\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美EIA数据：柴油库存创新低\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规数据\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"冲突进展\"},\n  {\"title_idx\":2,\"level\":\"A\",\"category\":\"大宗商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"价格幅度\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"大宗商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点预测\"},\n  {\"title_idx\":4,\"level\":\"A\",\"category\":\"公司动作\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"价格幅度\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"会议预告\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"冲突进展\"},\n  {\"title_idx\":7,\"level\":\"A\",\"category\":\"大宗商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"价格幅度\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规预测\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规预测\"},\n  {\"title_idx\":10,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规预测\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"风险提示\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规预测\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"大宗商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点预测\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点预测\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"外交活动\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点表态\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"公司动作\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点预测\"},\n  {\"title_idx\":18,\"level\":\"A\",\"category\":\"公司动作\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"价格幅度\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规数据\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"美股异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美股光伏/太阳能概念股异动\"},\n  {\"title_idx\":1,\"level\":\"A\",\"category\":\"美股指数\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"纳指涨超2%\"},\n  {\"title_idx\":2,\"level\":\"A\",\"category\":\"加密货币\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"比特币涨超2%破79000美元\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"美股指数\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"道指涨超2%\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"美股异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美股三大指数高开及个股涨跌\"},\n  {\"title_idx\":5,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"俄称袭击敖德萨港货船\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"商品市场\",\"card_id\":\"apec\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"阿联酋考虑建原油管道\"},\n  {\"title_idx\":7,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"欧盟外交官表态支持乌克兰\"},\n  {\"title_idx\":8,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"伊朗称击落美无人机\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"美股异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"道指期货开盘狂飙\"},\n  {\"title_idx\":10,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"胡塞武装打击沙特机场\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"货币政策\",\"card_id\":\"fed\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美联储11月3日利率数据\"},\n  {\"title_idx\":12,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"巴基斯坦与伊朗外交接触进展\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"公司事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"民主党胜选或影响AI数据中心\"},\n  {\"title_idx\":14,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"伊朗最高领袖表态\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"公司事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"马斯克财富缩水超600亿美元\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"公司事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"马斯克财富持续缩水\"},\n  {\"title_idx\":17,\"level\":\"C\",\"category\":\"公司事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"麦当劳称乌克兰冲突影响国际销售额\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"商品市场\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"汇丰上调原油产量预测\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"货币政策\",\"card_id\":\"fed\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美财政部修改国债拍卖指引\"}",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规拍卖指引调整\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"公司公告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"公司增持公告\"},\n  {\"title_idx\":2,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规拍卖规模公布\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":2,\"reason\":\"重复拍卖规模\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规拍卖公告\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规拍卖公告\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":4,\"reason\":\"重复拍卖规模\"},\n  {\"title_idx\":7,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":5,\"reason\":\"重复拍卖规模\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规选举结果公布\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规盘前新闻汇总\"},\n  {\"title_idx\":10,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规难民政策调整\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规分析师目标价\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规政治活动调整\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规数据播报\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规数据播报\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规冲突报道\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规官员表态\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规官员表态\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规官员表态\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":2,\"level\":\"B\",\"category\":\"政策建议\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"政策建议\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"地缘政治\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘政治\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"金融市场\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"金融市场\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"金融市场\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"金融市场\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"金融市场\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"金融市场\"},\n  {\"title_idx\":7,\"level\":\"B\",\"category\":\"指数行情\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"指数行情\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":10,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点\"},\n  {\"title_idx\":17,\"level\":\"A\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"通胀率超阈值\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"地缘政治\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘政治\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"地缘政治\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘政治\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普表态非事件\"},\n  {\"title_idx\":1,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"GDP数据非事件\"},\n  {\"title_idx\":2,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"军事袭击非事件\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态非事件\"},\n  {\"title_idx\":4,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态非事件\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"公司公告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美股盘前异动\"},\n  {\"title_idx\":6,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员通话非事件\"},\n  {\"title_idx\":7,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态非事件\"},\n  {\"title_idx\":8,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态非事件\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"政策发布\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"文件印发\"},\n  {\"title_idx\":10,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"CPI数据\"},\n  {\"title_idx\":11,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"前总统表态非事件\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"指数编制\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"指数修订\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"黄金价格涨超3%\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"政策发布\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"买断式逆回购操作\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"政策发布\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"买断式逆回购操作\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"服务业PMI数据\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"公司公告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"股权划转完成\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"政策发布\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"文件印发\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"白银价格涨超4%\"}\n]",
+    "[\n  {\"title_idx\":140,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"回应选举舞弊指控\"},\n  {\"title_idx\":141,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"回应选举结果\"},\n  {\"title_idx\":142,\"level\":\"B\",\"category\":\"公司公告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"股价异动\"},\n  {\"title_idx\":143,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"外交表态\"},\n  {\"title_idx\":144,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":143,\"reason\":\"重复外交表态\"},\n  {\"title_idx\":145,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"央行政策扩容\"},\n  {\"title_idx\":146,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"ETF成交放量\"},\n  {\"title_idx\":147,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"A股成交额突破\"},\n  {\"title_idx\":148,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"选举舞弊调查进展\"},\n  {\"title_idx\":149,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"伊美分歧难弥合\"},\n  {\"title_idx\":150,\"level\":\"A\",\"category\":\"地缘事件\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"霍尔木兹海峡油轮触雷\"},\n  {\"title_idx\":151,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"民众表达移民执法不满\"},\n  {\"title_idx\":152,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"马斯克干预选举表态\"},\n  {\"title_idx\":153,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"ETF成交额破百亿\"},\n  {\"title_idx\":154,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"选举计票结果预测\"},\n  {\"title_idx\":155,\"level\":\"B\",\"category\":\"公司公告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"股价异动\"},\n  {\"title_idx\":156,\"level\":\"A\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"现货黄金突破4000美元\"},\n  {\"title_idx\":157,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"美股期货跌幅收窄\"},\n  {\"title_idx\":158,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"现货白银涨幅扩大\"},\n  {\"title_idx\":159,\"level\":\"B\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普承认伊朗战事影响选举\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"指数\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"KOSPI跌幅4%\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"国债期货跌0.1%\"},\n  {\"title_idx\":2,\"level\":\"A\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"现货黄金涨1.1%\"},\n  {\"title_idx\":3,\"level\":\"A\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"黄金股ETF涨超4%\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普谈伊朗协议\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"选举\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"舒默称民主党赢参议院\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"选举\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普称民主党优势\"},\n  {\"title_idx\":7,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普谈伊朗战争\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"选举\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"预测民主党占选举先\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"早间要闻汇总\"},\n  {\"title_idx\":10,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"伊朗油轮触雷起火\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"企业\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普谈否决权\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"地缘\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"特朗普接受选举结果\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"指数\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"日韩股市跌超4%\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"市场\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"ETF两市成交额增\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"商品\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"比特币跌超2%\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"发改委谈水运航道\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"发改委谈交通投资\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"宏观数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"发改委谈零售总额\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"企业\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"科创板半导体回购超百亿\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"指数异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"核心指数跌幅≥2%\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"政策预告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"政策预告\"},\n  {\"title_idx\":2,\"level\":\"B\",\"category\":\"地缘评论\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘评论\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"指数异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"核心指数跌幅≥2%\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"市场观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"市场观点\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"央行操作\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规央行操作\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"央行操作\",\"card_id\":\"none\",\"is_dup\":true,\"dup_of\":5,\"reason\":\"同操作重复播报\"},\n  {\"title_idx\":7,\"level\":\"B\",\"category\":\"指数异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"核心指数异动\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"汇率异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"汇率异动\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"汇率异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"汇率异动\"},\n  {\"title_idx\":10,\"level\":\"A\",\"category\":\"企业资本动作\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"企业回购金额上调\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"市场统计\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"市场统计\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"市场观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"市场观点\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"市场观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"市场观点\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"地缘战况\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘战况\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"地缘战况\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘战况\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"企业资本动作\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"企业回购金额上调\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"地缘评论\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘评论\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"地缘评论\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"地缘评论\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"B\",\"category\":\"指数异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"非核心指数异动\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"政治表态\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"领导人表态\"},\n  {\"title_idx\":2,\"level\":\"B\",\"category\":\"政治表态\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"领导人表态\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"政治表态\",\"card_id\":\"iran\",\"is_dup\":true,\"dup_of\":2,\"reason\":\"同主体同事件\"},\n  {\"title_idx\":4,\"level\":\"C\",\"category\":\"选举进展\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规选举报道\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"市场观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"市场观点\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"公司异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"公司异动\"},\n  {\"title_idx\":7,\"level\":\"B\",\"category\":\"公司异动\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"公司异动\"},\n  {\"title_idx\":8,\"level\":\"B\",\"category\":\"市场政策\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"ETF政策\"},\n  {\"title_idx\":9,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"商品价格\"},\n  {\"title_idx\":10,\"level\":\"B\",\"category\":\"地缘表态\",\"card_id\":\"ukraine\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"领导人表态\"},\n  {\"title_idx\":11,\"level\":\"B\",\"category\":\"经济数据\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"常规经济数据\"},\n  {\"title_idx\":12,\"level\":\"B\",\"category\":\"央行表态\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"央行官员表态\"},\n  {\"title_idx\":13,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"商品价格\"},\n  {\"title_idx\":14,\"level\":\"B\",\"category\":\"地缘表态\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"领导人表态\"},\n  {\"title_idx\":15,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"商品价格\"},\n  {\"title_idx\":16,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"商品价格\"},\n  {\"title_idx\":17,\"level\":\"B\",\"category\":\"市场观点\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"市场观点\"},\n  {\"title_idx\":18,\"level\":\"B\",\"category\":\"地缘表态\",\"card_id\":\"iran\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"领导人表态\"},\n  {\"title_idx\":19,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"商品价格\"}\n]",
+    "[\n  {\"title_idx\":0,\"level\":\"C\",\"category\":\"地缘事件\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"观点表态\"},\n  {\"title_idx\":1,\"level\":\"B\",\"category\":\"汇率\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"汇率变动<2%\"},\n  {\"title_idx\":2,\"level\":\"B\",\"category\":\"货币政策\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态\"},\n  {\"title_idx\":3,\"level\":\"B\",\"category\":\"商品价格\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"商品价格变动<5%\"},\n  {\"title_idx\":4,\"level\":\"B\",\"category\":\"货币政策\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态\"},\n  {\"title_idx\":5,\"level\":\"B\",\"category\":\"货币政策\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"官员表态\"},\n  {\"title_idx\":6,\"level\":\"B\",\"category\":\"公司公告\",\"card_id\":\"none\",\"is_dup\":false,\"dup_of\":null,\"reason\":\"公司回应\"}\n]"
+  ],
+  "sample": [
+    {
+      "idx": 0,
+      "title": "新兴市场外汇指数（EMFX）触及日内高点，美国中期选举过后美元走弱",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 1,
+      "title": "新兴市场外汇指数刷新日高，得益于美元在美国中期选举结果出炉后走弱",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 2,
+      "title": "伊朗外交部：伊朗驻波兰大使于周三拜会伊朗外长阿拉格奇，就使馆最新工作进展、双边关系态势以及德黑兰 — 华沙双边议程重点项",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 3,
+      "title": "以方称打死哈马斯军事情报行动负责人",
+      "src": "同花顺"
+    },
+    {
+      "idx": 4,
+      "title": "沙特与叙利亚签署能源、军事合作协议",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 5,
+      "title": "布伦特原油期货跌幅扩大至10%，逼近93美元",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 6,
+      "title": "美国财政部网站：美国发布新一轮涉伊朗制裁",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 7,
+      "title": "现货白银大涨5%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 8,
+      "title": "美国众议院民主党领袖杰弗里斯：将推动通过法案以阻止特朗普关税政策，结束伊朗战争",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 9,
+      "title": "胡塞武装：过去 24 小时内，沙特战机发动 104 次空袭与导弹打击，袭击首都萨那以及焦夫、贝达、萨达、阿姆兰、马里卜、",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 10,
+      "title": "欧盟委员会举行多方涉乌会谈 讨论乌克兰战后重建与经济发展",
+      "src": "同花顺 / 新浪财经"
+    },
+    {
+      "idx": 11,
+      "title": "英特尔跌幅迅速收窄至2.4%，该公司CEO11月2日按每股64.7312美元在公开市场购买15万股英特尔普通股",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 12,
+      "title": "英特尔跌幅迅速收窄，目前下跌2.4%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 13,
+      "title": "美国众议院民主党领导人：将通过立法来阻止特朗普关税政策，结束伊朗战争",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 14,
+      "title": "民主党重掌国会 两党对峙将使美政治陷入新僵局",
+      "src": "同花顺"
+    },
+    {
+      "idx": 15,
+      "title": "俄罗斯国防部：自周三上午以来，俄各地区上空已击落46架无人机",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 16,
+      "title": "欧盟声明：乌克兰、德国、法国、英国、美国代表团以及北约和世界银行代表举行会晤，讨论乌克兰战后重建与繁荣问题",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 17,
+      "title": "伊朗最高国家安全委员会秘书穆赫辛·雷扎伊：伊朗民族在战场、霍尔木兹海峡令特朗普遭遇重大战略挫败，同时在华盛顿方面承受沉重",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 18,
+      "title": "英国国债收益率普遍跌超10个基点",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 19,
+      "title": "五角大楼：2026年我们在中东部署了超过2.5万套无人机及反无人机系统",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 20,
+      "title": "欧佩克：原油运输及保险成本飙升 加剧全球通胀压力",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 21,
+      "title": "布伦特原油失守95美元/桶",
+      "src": "同花顺"
+    },
+    {
+      "idx": 22,
+      "title": "以军对黎南部发动空袭 造成1死1伤",
+      "src": "同花顺 / 新浪财经"
+    },
+    {
+      "idx": 23,
+      "title": "以军称打死哈马斯一高级指挥官",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 24,
+      "title": "WTI原油大跌6%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 25,
+      "title": "民主党夺下美国参议院，特朗普重塑美联储之路再添屏障",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 26,
+      "title": "BNY Investments首席经济学家、前美联储高级官员Vincent Reinhart表示：美国参议院始终是对白宫",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 27,
+      "title": "美国延长与伊朗相关的国家紧急状态令",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 28,
+      "title": "美国延长与尼加拉瓜相关的国家紧急状态令",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 29,
+      "title": "Potomac River Capital投资经理Mark Spindel认为，美国民主党掌控参议院，为美联储提供了一道",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 30,
+      "title": "也门胡塞武装称袭击利雅得国际机场等设施",
+      "src": "同花顺"
+    },
+    {
+      "idx": 31,
+      "title": "巴基斯坦副总理与伊朗外长在伊斯兰堡会见伊朗伊斯兰共和国大使，就地区最新局势和双边关系发展交换了意见",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 32,
+      "title": "布油跌穿100美元关口，万斯在分析共和党败落时谈及与以色列的关系等因素",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 33,
+      "title": "美国能源信息署（EIA）数据显示，最新一周美国石油产品供应量升至2025年10月以来最高水平",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 34,
+      "title": "乌克兰总统泽连斯基抵达西班牙，将在伊比利亚美洲峰会期间举行高层会晤",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 35,
+      "title": "美国副总统万斯：与以色列的关系是共和党失利的原因之一",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 36,
+      "title": "万斯谈论共和党在美国中期选举失败的原因：战争、与以色列的关系",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 37,
+      "title": "美国能源信息署（EIA）数据显示，美国墨西哥湾沿岸原油库存最新一周降至2022年12月以来最低水平",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 38,
+      "title": "美国至10月30日当周EIA原油库存 -86.5万桶，预期198.7万桶，前值-189.2万桶",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 39,
+      "title": "美国能源部：美国柴油库存跌破1亿桶，创2003年以来新低",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 40,
+      "title": "美国10月30日当周EIA精炼厂设备利用率变化 1.7%，预期 -0.4%，前值 -0.6%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 41,
+      "title": "伊朗革命卫队称击落一架美军MQ-1无人机",
+      "src": "新浪财经 / 同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 42,
+      "title": "比特币升破81000美元，日内涨4.59%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 43,
+      "title": "花旗预计黄金0-3个月内的目标价为每盎司4500美元",
+      "src": "新浪财经 / 同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 44,
+      "title": "苹果、微软、谷歌、亚马逊集体大涨5%-8%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 45,
+      "title": "中东欧四国总统峰会在斯洛伐克举行",
+      "src": "同花顺 / 华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 46,
+      "title": "胡塞武装称对沙特哈立德国王国际机场等目标进行打击",
+      "src": "同花顺 / 华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 47,
+      "title": "比特币升破80000美元，日内涨3.60%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 48,
+      "title": "波兰央行预计2028年GDP增长1.7%至3.9%，7月预测为1.8%至4.1%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 49,
+      "title": "波兰央行预计2027年GDP增长1.9%至3.8%，7月预测为1.8%至3.7%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 50,
+      "title": "以太坊升破2400美元，日内涨5.73%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 51,
+      "title": "波兰央行预计2026年GDP增长3.2%至4.1%，7月预测为3.0%至4.4%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 52,
+      "title": "波兰央行：财政政策和能源价格是CPI面临的风险",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 53,
+      "title": "波兰央行预计2026年CPI为3.1%-3.2%，7月预测为2.4%-3.3%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 54,
+      "title": "摩根大通和汇丰银行表示，中东动荡后的石油供应正在恢复",
+      "src": "新浪财经 / 华尔街见闻"
+    },
+    {
+      "idx": 55,
+      "title": "驻伊朗大使丛培武向伊朗知名智库议会研究中心宣介中共二十届五中全会精神",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 56,
+      "title": "法国外长：美国选举结果不应分散欧洲对维护自身利益和独立性的注意力",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 57,
+      "title": "摩根大通：中期选举过后，科技股有望反弹",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 58,
+      "title": "道指、纳指均涨超2% 苹果、微软、亚马逊至少涨5%-7%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 59,
+      "title": "美国10月标普全球服务业PMI终值56.1，创7月份以来新低",
+      "src": "华尔街见闻 / 同花顺 / 新浪财经"
+    },
+    {
+      "idx": 60,
+      "title": "美股光伏/太阳能概念股普遍走高，美国总统特朗普所属共和党在中期选举中一败涂地",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 61,
+      "title": "纳指涨2.00%，现报25879.645点",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 62,
+      "title": "比特币升破79000美元，日内涨2.16%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 63,
+      "title": "道指涨2.06%，现报52852.219点",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 64,
+      "title": "美股三大指数集体高开",
+      "src": "同花顺"
+    },
+    {
+      "idx": 65,
+      "title": "俄罗斯称袭击了敖德萨港的货船",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 66,
+      "title": "阿联酋考虑建设第三条原油管道，以避开霍尔木兹海峡",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 67,
+      "title": "欧盟外交与安全政策高级代表卡拉斯：我希望新一届国会和新一届参议院将继续支持乌克兰",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 68,
+      "title": "伊朗伊斯兰革命卫队（IRGC）消息称，一架美国MQ1无人机在格什姆岛上空被伊朗防空部队击落",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 69,
+      "title": "道指期货在美股开盘之前狂飙超1100点，民主党在美国中期选举中胜出、给华尔街扫除了政治不确定性风险",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 70,
+      "title": "胡塞武装：我方武装力量已发射弹道导弹，对敌方沙特首都利雅得的哈立德国王国际机场实施打击，导弹直接命中，给机场造成严重损毁",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 71,
+      "title": "美联储数据显示，11月3日美国有效联邦基金利率为3.88%，成交规模1130亿美元",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 72,
+      "title": "巴基斯坦总理：巴基斯坦与伊朗及其他地区国家近期的外交接触取得了“非常积极”的进展",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 73,
+      "title": "民主党中期选举大胜 美国AI数据中心热潮料迎剧变",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 74,
+      "title": "伊朗最高领袖：伊朗民族不久将迎来胜利、繁荣和全面进步，并为美国统治的进一步加速衰落创造条件",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 75,
+      "title": "美国中期选举已致马斯克财富缩水超600亿美元",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 76,
+      "title": "中期选举已经让马斯克损失超过600亿美元，而且还在增加",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 77,
+      "title": "麦当劳表示，乌克兰冲突升级影响了其国际销售额",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 78,
+      "title": "汇丰银行将2026年第四季度原油产量预测从之前的630万桶/日上调至830万桶/日",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 79,
+      "title": "美国财政部修改未来拍卖规模调整指引，美国财政部在维持国债拍卖规模稳定的指引中删除“至少”一词",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 80,
+      "title": "美国财政部调整未来国债拍卖规模变动指引",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 81,
+      "title": "中国太保举牌中国神华H股：斥资约3.45亿港元增持，合计持股比例升至5.15%",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 82,
+      "title": "美国财政部将拍卖420亿美元十年期债券、250亿美元30年期债券",
+      "src": "同花顺"
+    },
+    {
+      "idx": 83,
+      "title": "以色列一安全公司说部分AI网络入侵系人为失误",
+      "src": "华尔街见闻 / 新浪财经"
+    },
+    {
+      "idx": 84,
+      "title": "美国财政部定于11月10日拍卖420亿美元10年期国债",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 85,
+      "title": "美国将季度再融资规模定为1250亿美元，与预期一致",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 86,
+      "title": "美国财政部定于11月12日拍卖250亿美元30年期国债",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 87,
+      "title": "美国财政部定于11月9日举行规模为580亿美元的三年期国债拍卖",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 88,
+      "title": "以议会选举结果正式公布，两大阵营均未获多数席位",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 89,
+      "title": "周三美股盘前你需要了解的全球要闻",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 90,
+      "title": "无力继续收容 黎巴嫩推动叙利亚难民回国",
+      "src": "同花顺"
+    },
+    {
+      "idx": 91,
+      "title": "花旗对黄金给出0-3个月目标价4,500美元/盎司，6-12个月目标价5,000美元/盎司",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 92,
+      "title": "中期选举失利后，特朗普取消公开活动安排",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 93,
+      "title": "美元指数在ADP就业数据公布后维持跌势，最新下跌0.49%，报101.24点",
+      "src": "同花顺 / 新浪财经"
+    },
+    {
+      "idx": 94,
+      "title": "现货黄金在美国ADP就业数据公布后变动不大，最新上涨2.74%，报每盎司4035.85美元",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 95,
+      "title": "美国“小非农”高于预期",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 96,
+      "title": "英国首相伯纳姆：世界有机会专注于解决伊朗战争",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 97,
+      "title": "乌克兰无人机袭击俄罗斯别尔哥罗德州，造成三人死亡",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 98,
+      "title": "欧洲央行管委诺特：不要主动寻求危机，但希望参与其中",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 99,
+      "title": "纳斯达克100指数期货抹去前期涨幅，转为下跌",
+      "src": "同花顺"
+    },
+    {
+      "idx": 100,
+      "title": "Scope Ratings称美国中期选举结果利好主权信用 制衡机制得到强化",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 101,
+      "title": "欧洲央行管委诺特：危机往往能推动通常难以撼动的事物发生改变",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 102,
+      "title": "欧洲央行管委诺特：建议养老金体系采用自动加入机制",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 103,
+      "title": "英国首相发言人威尔斯：英国首相伯纳姆的首要任务是推动中东局势降温",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 104,
+      "title": "欧洲央行管委诺特：私募信贷存在评级和估值不透明的问题",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 105,
+      "title": "欧洲央行管委诺特：金融市场难以对地缘政治风险进行定价",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 106,
+      "title": "欧洲央行管委诺特：荷兰新养老金体系在吸收波动性方面表现更好",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 107,
+      "title": "纳指期货转跌",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 108,
+      "title": "欧洲央行行长候选人诺特：欧洲央行随后将采取“略显鹰派”的政策应对",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 109,
+      "title": "欧洲央行管委诺特：欧洲缺乏一体化资本市场",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 110,
+      "title": "欧洲央行管委诺特：允许更高程度的一体化可提振生产率增长",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 111,
+      "title": "德国外长就乌克兰援助表示：我对美国国会两党将加强相互接触持乐观态度",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 112,
+      "title": "欧洲央行管委诺特：通过明智应用，可从人工智能中获益",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 113,
+      "title": "欧洲央行管委诺特：人工智能将带来生产率增长",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 114,
+      "title": "欧洲央行管委诺特：欧洲央行随后将以“偏鹰派”政策应对",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 115,
+      "title": "欧洲央行管委诺特：将继续看到推高通胀的小幅冲击",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 116,
+      "title": "德国外交部长：外交政策在美国大选中发挥了重要作用，包括伊朗问题",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 117,
+      "title": "欧洲央行管委诺特：核心通胀及第二轮效应可能抬头",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 118,
+      "title": "欧元区10月通胀率升至4.0%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 119,
+      "title": "共和党中期选举惨败后 特朗普淡化对伊朗发动打击的可能性",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 120,
+      "title": "特朗普称对伊朗“不需要使用核武器”",
+      "src": "华尔街见闻 / 新浪财经 / 同花顺"
+    },
+    {
+      "idx": 121,
+      "title": "乌克兰第三季度GDP初步数据同比下降0.7%",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 122,
+      "title": "也门政府军一军事训练中心遭导弹袭击",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 123,
+      "title": "欧盟经济事务委员东布罗夫斯基斯：继续与合作伙伴就乌克兰资金开展沟通",
+      "src": "新浪财经"
+    },
+    {
+      "idx": 124,
+      "title": "伊朗：美国国会力量对比变化不会改变其敌视政策",
+      "src": "同花顺"
+    },
+    {
+      "idx": 125,
+      "title": "麦当劳美股盘前涨幅扩大至2.27%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 126,
+      "title": "中国政府中东问题特使翟隽同卡塔尔外交部国务大臣胡莱菲通话",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 127,
+      "title": "伊朗最高领袖：若美侵略行径重演 战争规模将会更大",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 128,
+      "title": "伊朗最高领袖：美国寻求伊朗“无条件投降”",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 129,
+      "title": "国家发改委等三部门印发《生态产品总值核算规范》",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 130,
+      "title": "欧元区10月份CPI同比上涨4.0%",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 131,
+      "title": "奥巴马回应美国中期选举",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 132,
+      "title": "上交所、中证指数公司修订上证港股通指数编制方案：剔除过去一年日均成交金额不足500万港元的证券",
+      "src": "同花顺"
+    },
+    {
+      "idx": 133,
+      "title": "现货黄金涨超3%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 134,
+      "title": "中国央行：11月5日，将开展3000亿元买断式逆回购操作",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 135,
+      "title": "央行：2026年11月5日开展3000亿元买断式逆回购操作 期限为3个月（91天）",
+      "src": "同花顺"
+    },
+    {
+      "idx": 136,
+      "title": "欧元区10月服务业PMI终值 51.4，预期 51.7，初值 51.7",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 137,
+      "title": "川发龙蟒：四川发展向四川省国资委划转川盐集团51%股权已完成",
+      "src": "同花顺"
+    },
+    {
+      "idx": 138,
+      "title": "国家发改委印发《招标投标领域公共信用信息目录（2026年版）》",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 139,
+      "title": "现货白银涨超4%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 140,
+      "title": "以色列中央选举委员会否认存在选举舞弊",
+      "src": "同花顺"
+    },
+    {
+      "idx": 141,
+      "title": "美众议长称输中期选举是历史规律",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 142,
+      "title": "特斯拉与SpaceX在Tradegate交易平台较美股昨日收盘价下跌5%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 143,
+      "title": "外交部：当前中东局势紧张升级，中方愿意同沙特、伊朗等地区国家加强沟通对话",
+      "src": "同花顺"
+    },
+    {
+      "idx": 144,
+      "title": "外交部谈中东局势：中方愿同沙特、伊朗等地区国家加强沟通对话",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 145,
+      "title": "股票回购增持再贷款扩容，5家城商行进入支持机构名单",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 146,
+      "title": "ETF两市成交额报7058.68亿元，较昨日此时放量1186.78亿元",
+      "src": "同花顺"
+    },
+    {
+      "idx": 147,
+      "title": "A股重回2万亿成交！",
+      "src": "同花顺"
+    },
+    {
+      "idx": 148,
+      "title": "以总检察长要求情报机构提交选举舞弊调查进展",
+      "src": "同花顺"
+    },
+    {
+      "idx": 149,
+      "title": "伊朗官员：调解方斡旋下伊美分歧仍难弥合",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 150,
+      "title": "伊朗称4艘“违规”油轮在霍尔木兹海峡触雷",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 151,
+      "title": "美民众借中期选举表达对移民执法不满",
+      "src": "同花顺"
+    },
+    {
+      "idx": 152,
+      "title": "马斯克就美国中期选举发声",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 153,
+      "title": "沪深300ETF华泰柏瑞成交额100亿",
+      "src": "同花顺"
+    },
+    {
+      "idx": 154,
+      "title": "美国中期选举现场投票已基本结束",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 155,
+      "title": "中际旭创A股午后涨超10%，港股涨幅扩大至6%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 156,
+      "title": "现货黄金重回4000美元/盎司上方",
+      "src": "同花顺"
+    },
+    {
+      "idx": 157,
+      "title": "美股三大股指期货跌幅全线收窄",
+      "src": "同花顺"
+    },
+    {
+      "idx": 158,
+      "title": "现货白银日内涨幅扩大至2%，报50.85美元/盎司",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 159,
+      "title": "特朗普承认伊朗战事对共和党中期选举表现有影响",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 160,
+      "title": "韩国KOSPI指数翻红，抹去此前高达4%的跌幅",
+      "src": "同花顺"
+    },
+    {
+      "idx": 161,
+      "title": "国债期货走弱 30年期主力合约跌0.1%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 162,
+      "title": "贵金属板块持续冲高",
+      "src": "同花顺"
+    },
+    {
+      "idx": 163,
+      "title": "多只黄金股ETF涨超4%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 164,
+      "title": "美国总统特朗普：如果伊朗表现良好，我们可以签署一些协议",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 165,
+      "title": "舒默称民主党赢得了参议院",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 166,
+      "title": "美总统特朗普承认民主党在中期选举中取得优势 并称他拥有完全的否决权",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 167,
+      "title": "美国总统特朗普：对中期选举结果感到意外",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 168,
+      "title": "预测显示美国民主党在各项选举中暂时占先",
+      "src": "同花顺"
+    },
+    {
+      "idx": 169,
+      "title": "早间要闻汇总",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 170,
+      "title": "伊朗：4艘试图通过霍尔木兹海峡的油轮触雷起火",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 171,
+      "title": "特朗普：若民主党掌控国会 他将行使否决权",
+      "src": "同花顺"
+    },
+    {
+      "idx": 172,
+      "title": "特朗普在接受采访时表示，他将接受中期选举结果",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 173,
+      "title": "日韩股市均跌4%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 174,
+      "title": "ETF两市成交额报3461.51亿元，较昨日此时放量532.76亿元",
+      "src": "同花顺"
+    },
+    {
+      "idx": 175,
+      "title": "比特币跌破76000美元，日内跌超2%",
+      "src": "同花顺"
+    },
+    {
+      "idx": 176,
+      "title": "国家发改委：“十五五”时期，我国将新建约2500公里国家高等级水运航道",
+      "src": "同花顺"
+    },
+    {
+      "idx": 177,
+      "title": "国家发改委：“十五五”交通领域投资预计维持较大规模，严防项目跟风炒作",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 178,
+      "title": "国家发改委：预计到“十五五”末，我国社会消费品零售总额达到60万亿元左右",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 179,
+      "title": "科创板半导体公司10月以来新增回购上限突破100亿元",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 180,
+      "title": "韩国首尔综指跌幅扩大至2.7%，SK海力士跌超4%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 181,
+      "title": "国家发改委：推动更多水利基础设施投资信托基金发行上市",
+      "src": "华尔街见闻 / 同花顺"
+    },
+    {
+      "idx": 182,
+      "title": "朝鲜说美国持续发出对朝敌对信号",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 183,
+      "title": "纳指期货盘中跌2%，美国民主党在中期选举中势头强劲",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 184,
+      "title": "澳洲联邦银行称美国选举初步结果似有利债市",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 185,
+      "title": "央行：11月4日开展了2575亿元1天期逆回购操作",
+      "src": "同花顺"
+    },
+    {
+      "idx": 186,
+      "title": "中国央行进行2,575亿元人民币隔夜逆回购操作，操作利率1.25%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 187,
+      "title": "恒指低开0.32%，报23451.79点",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 188,
+      "title": "现货白银站上50美元/盎司",
+      "src": "同花顺"
+    },
+    {
+      "idx": 189,
+      "title": "人民币兑美元中间价报6.7180，较上日调低30点",
+      "src": "同花顺"
+    },
+    {
+      "idx": 190,
+      "title": "中国人民银行加力实施股票回购增持再贷款政策",
+      "src": "同花顺 / 华尔街见闻"
+    },
+    {
+      "idx": 191,
+      "title": "两市融资余额较上日减少320.82亿元",
+      "src": "同花顺"
+    },
+    {
+      "idx": 192,
+      "title": "花旗：中际旭创因砍单担忧出现股价过度回调 公司基本面依然稳健",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 193,
+      "title": "随着美国中期选举初步计票结果陆续出炉，美国国债收益率随美元走低",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 194,
+      "title": "澳新银行将中国香港2026年GDP增长预期从3.8%上调至5.1%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 195,
+      "title": "美国六个州中期选举投票站已关闭 计票工作陆续展开",
+      "src": "同花顺"
+    },
+    {
+      "idx": 196,
+      "title": "俄称大规模打击乌能源设施 乌称恢复袭击俄炼油厂",
+      "src": "同花顺"
+    },
+    {
+      "idx": 197,
+      "title": "长鑫科技拟大幅增加回购金额",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 198,
+      "title": "长鑫科技：董事长提议将回购金额上调至25亿元-50亿元",
+      "src": "同花顺"
+    },
+    {
+      "idx": 199,
+      "title": "特朗普称美国暂无立即打击伊朗计划",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 200,
+      "title": "日经225指数低开0.2%，韩国首尔综指高开2.4%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 201,
+      "title": "特朗普在中期选举投票结束前接受CBS采访时表示，如有必要，准备否决民主党的法案",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 202,
+      "title": "特朗普：美国没有立即打击伊朗的计划",
+      "src": "同花顺"
+    },
+    {
+      "idx": 203,
+      "title": "美国总统特朗普表示，美国没有立即打击伊朗的计划",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 204,
+      "title": "美国中期选举部分地区投票结束",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 205,
+      "title": "港股估值吸引力提升，11月市场聚焦盈利改善",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 206,
+      "title": "CVS美股盘后涨3%，媒体报道称，该公司考虑拆分其零售药房业务",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 207,
+      "title": "AMD美股盘后一度上涨超过14.69%，报555美元",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 208,
+      "title": "首批主动ETF结束募集，合计募资超350亿元",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 209,
+      "title": "周二（11月3日）纽约尾盘，现货黄金跌0.41%，报3929.98美元/盎司",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 210,
+      "title": "德国总理：德国将继续全力支持乌克兰",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 211,
+      "title": "新西兰三季度失业率 5.7%，预期 5.5%，前值 5.6%",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 212,
+      "title": "欧洲央行管委Kocher：央行将在必要时继续针对通胀做出回应",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 213,
+      "title": "美国迎来首个汽油涨破4美元的投票日",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 214,
+      "title": "一年内发生两次重大高铁事故，西班牙交通大臣宣布辞职",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 215,
+      "title": "美债收益率小幅上扬",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 216,
+      "title": "加拿大原油较美国价格折让幅度创2018年以来最大",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 217,
+      "title": "彭博伦敦科技峰会要点总结",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 218,
+      "title": "两名地区消息人士透露，美国和伊朗之间的谈判陷入僵局",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 219,
+      "title": "WTI 12月原油期货收跌0.40美元，跌幅超过0.41%，报96.09美元/桶，亚太盘初以来持续平缓地走高，北京时间2",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 220,
+      "title": "埃及外交部声明：埃及外长向伊朗外长表示，各方都需要展现必要的灵活性，并努力推动地区危机的政治解决",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 221,
+      "title": "美元兑日元涨0.5%，报158.73",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 222,
+      "title": "欧洲央行管委兼德国央行行长Nagel：相信法国将处理好预算问题",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 223,
+      "title": "上期所原油期货2612合约夜盘收跌2.32%，报678.80元人民币/桶",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 224,
+      "title": "欧洲央行管委Sleijpen：伊朗冲击比之前想象的更加顽固",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 225,
+      "title": "周二（11月3日），美联储隔夜逆回购协议（RRP）使用规模为4.27亿美元（交易对手3家），上个交易日报50.87亿美元",
+      "src": "华尔街见闻"
+    },
+    {
+      "idx": 226,
+      "title": "与部分OpenAI、Anthropic AI黑客事件相关的以色列公司称系“错误”所致",
+      "src": "华尔街见闻"
+    }
+  ]
+}

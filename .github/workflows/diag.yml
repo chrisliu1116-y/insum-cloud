@@ -1,0 +1,75 @@
+name: 订阅解析四方法诊断（只读·不跑批·不提交）
+
+# 一次性诊断 4 种订阅解析方法，找出能让 #3 输出 43 节点的方案。
+# 全程不打印订阅链接/节点名明文，只打印数量。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: 安装依赖
+        run: pip install -r requirements.txt pyyaml
+
+      - name: 起本地 subconverter（方法4用，零外泄）
+        run: |
+          docker run -d --name mp-sub -p 127.0.0.1:25500:25500 tindy2013/subconverter:latest
+          for i in $(seq 1 20); do
+            curl -fsS --max-time 3 http://127.0.0.1:25500/version >/dev/null 2>&1 && { echo ready; break; }
+            sleep 2
+          done
+
+      - name: 下载 mihomo
+        env: { GH_TOKEN: ${{ github.token }} }
+        run: |
+          URL="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
+            | python3 -c 'import sys,json; d=json.load(sys.stdin); \
+              a=[x["browser_download_url"] for x in d["assets"] if "linux-amd64" in x["name"] and "compatible" not in x["name"] and x["name"].endswith(".gz")]; \
+              a=a or [x["browser_download_url"] for x in d["assets"] if "linux-amd64-compatible" in x["name"] and x["name"].endswith(".gz")]; print(a[0] if a else "")')"
+          curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
+          /tmp/mihomo -v 2>&1 | head -1 || true
+
+      - name: 【方法1】原生 proxy-providers + 管理端口读数
+        env: { SUB_URLS: ${{ secrets.SUB_URLS }} }
+        run: |
+          mkdir -p /tmp/native-conf
+          python3 tools/make_native_config.py /tmp/native-conf/config.yaml
+          /tmp/mihomo -d /tmp/native-conf > /tmp/mihomo-native.log 2>&1 &
+          echo $! > /tmp/mihomo.pid
+          # 等 provider 拉取（每个 provider 的 HTTP 订阅可能慢）
+          sleep 45
+          echo "=== 原生 providers/proxies 各源节点数 ==="
+          curl -s http://127.0.0.1:9090/providers/proxies \
+            | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin).get('providers',{})
+          for k,v in d.items():
+            if k.startswith('up'):
+              ps=v.get('proxies',[])
+              names=[p.get('name','') for p in ps]
+              geo=sum(1 for n in names if any(x in n for x in ['香港','HK','台湾','TW','新加坡','SG','日本','JP','韩国','KR']))
+              print('  provider %s: 节点=%d 亚太=%d'%(k,len(ps),geo))
+          "
+          echo "=== mihomo 日志(末尾) ==="
+          tail -15 /tmp/mihomo-native.log || true
+          kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true
+
+      - name: 【方法2/3/4】递归解包 + UA对比 + 本地转换
+        env: { SUB_URLS: ${{ secrets.SUB_URLS }} }
+        run: python3 tools/diag_sources.py
+
+      - name: 清理
+        if: always()
+        run: |
+          [ -f /tmp/mihomo.pid ] && kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true
+          docker rm -f mp-sub 2>/dev/null || true
+          echo cleaned

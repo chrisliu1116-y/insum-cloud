@@ -1,0 +1,88 @@
+name: 事件卡片每日态势演进（GHA + 免费LLM）
+
+# 每天 2 次（北京 08:00 / 20:00）由 CF Worker Cron dispatch（GHA schedule 在本账号不触发）。
+# 复用 llm_pool 四通道降级，做 Scope 过滤 + 三段式重写 + 自动归档，输出 events_daily.json。
+# 抓取层沿用项目成熟的多源方案；本 workflow 只做"提纯重写"。
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'full=全量重写 / dry=仅测试不提交'
+        required: false
+        default: 'full'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: evolve-events
+  cancel-in-progress: false
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 拉取今日关联新闻（复用现有抓取产物）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 从本仓库 data/events_news_today.json 读人工/抓取维护的今日新闻映射；
+          # 若不存在则用空映射（LLM 会标记"今日无实质进展"，不污染卡片）。
+          if [ -f data/events_news_today.json ]; then
+            echo "今日新闻映射存在: $(python3 -c 'import json;d=json.load(open("data/events_news_today.json"));print(sum(len(v) for v in d.values()))') 条"
+          else
+            echo "::warning::data/events_news_today.json 不存在，将用空映射"
+            echo '{}' > data/events_news_today.json
+          fi
+
+      - name: LLM 提纯重写卡片
+        env:
+          ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+        run: |
+          python3 tools/evolve_events.py \
+            --news data/events_news_today.json \
+            --prev data/events_daily.json \
+            --out data/events_daily.json
+
+      - name: 提交结果（带护栏）
+        if: inputs.mode != 'dry'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('data/events_daily.json',encoding='utf-8'))
+          cards=d.get('cards',{})
+          assert len(cards)>=4, '卡片数不足4'
+          for cid,c in cards.items():
+              s=c.get('summary','')
+              assert 60<=len(s)<=130, '%s 字数异常 %d'%(cid,len(s))
+              assert c.get('status'), '%s 无气泡'%cid
+          print('护栏通过: %d张卡'%len(cards))
+          PY
+          git config user.name "evolve-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain -- data/events_daily.json)" ]; then
+            echo "数据无变化，跳过提交"
+          else
+            git add data/events_daily.json
+            git commit -m "data: 事件卡片态势演进 $(TZ=Asia/Shanghai date +%Y-%m-%d\ %H:%M)"
+            git pull --rebase origin main || true
+            git push
+            echo "已提交 events_daily.json"
+          fi
+
+      - name: 刷新 CDN
+        if: inputs.mode != 'dry'
+        run: |
+          curl -fsS --max-time 20 \
+            "https://purge.jsdelivr.net/gh/chrisliu1116-y/insum-cloud@main/data/events_daily.json" \
+            || echo "::warning::purge 失败"

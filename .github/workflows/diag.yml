@@ -15,7 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:/n          python-version: '3.11'
+        with:
+          python-version: '3.11'
       - name: 安装依赖
         run: pip install -r requirements.txt pyyaml
 
@@ -28,7 +29,8 @@ jobs:
           done
 
       - name: 下载 mihomo
-        env:/n          GH_TOKEN: ${{ github.token }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           URL="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
             https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
@@ -39,7 +41,8 @@ jobs:
           /tmp/mihomo -v 2>&1 | head -1 || true
 
       - name: 【方法1】原生 proxy-providers + 管理端口读数
-        env:/n          SUB_URLS: ${{ secrets.SUB_URLS }}
+        env:
+          SUB_URLS: ${{ secrets.SUB_URLS }}
         run: |
           mkdir -p /tmp/native-conf
           python3 tools/make_native_config.py /tmp/native-conf/config.yaml
@@ -64,7 +67,8 @@ jobs:
           kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true
 
       - name: 【方法2/3/4】递归解包 + UA对比 + 本地转换
-        env:/n          SUB_URLS: ${{ secrets.SUB_URLS }}
+        env:
+          SUB_URLS: ${{ secrets.SUB_URLS }}
         run: python3 tools/diag_sources.py
 
       - name: 清理

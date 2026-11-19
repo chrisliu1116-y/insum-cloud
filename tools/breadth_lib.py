@@ -129,7 +129,9 @@ def _is_clist(url):
 def _clist_url():
     global _clist_idx
     scheme = _ACTIVE_SCHEME or 'https'
-    return '%s://%s/api/qt/clist/get' % (scheme, CLIST_HOSTS[_clist_idx % len(CLIST_HOSTS)])
+    # v480d：标准requests直连时，实测只有主域名 push2.eastmoney.com 通（分片82/48/39在GHA直连报ProxyError）
+    host = 'push2.eastmoney.com' if _USING_OPENSSL else CLIST_HOSTS[_clist_idx % len(CLIST_HOSTS)]
+    return '%s://%s/api/qt/clist/get' % (scheme, host)
 
 def _advance_clist(reason=''):
     """clist 失败时顺位切下一分片。"""
@@ -147,7 +149,7 @@ def probe_transport():
     global _ACTIVE_MODE, _ACTIVE_SCHEME
     params = {'pn':1,'pz':1,'po':1,'np':1,'fltt':2,'invt':2,
               'fid':'f12','fs':FS_SH,'fields':'f12,f14'}
-    host = CLIST_HOSTS[0]
+    host = 'push2.eastmoney.com' if _USING_OPENSSL else CLIST_HOSTS[0]
     tried = []
     # 每个模式试 http 与 https 两种 scheme（http优先，物理无TLS）
     for mode in MODE_ORDER:

@@ -77,8 +77,8 @@ concurrency:
 # source=eastmoney / no_probe=true 覆盖。用户口径：切到东财后日常也一次性跑完、
 # 不用探针（探针探不通也跑不成，止损靠 watchdog/熔断/护栏）。
 env:
-  DEFAULT_SOURCE: eastmoney     # 2026-11-18 正式转正东财（机场代理出口，见「启动机场代理」步骤）
-  DEFAULT_NO_PROBE: 'true'      # 东财走代理已验证零失败，探针浪费请求，日常关闭（止损靠 watchdog/熔断/护栏）
+  DEFAULT_SOURCE: tencent     # 2026-11-18 正式转正东财（机场代理出口，见「启动机场代理」步骤）
+  DEFAULT_NO_PROBE: false      # 东财走代理已验证零失败，探针浪费请求，日常关闭（止损靠 watchdog/熔断/护栏）
 
 jobs:
   run:

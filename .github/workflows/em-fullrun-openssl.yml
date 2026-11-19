@@ -101,7 +101,7 @@ jobs:
           echo "全量试跑启动：OpenSSL+${{ inputs.mode }} ${{ inputs.mode == 'direct' && '30' || '40' }}并发，起点 东财底稿 8818日/5584只"
           T0=$(date +%s)
           set +e
-          timeout 240 python tools/breadth_run.py --out /tmp/breadth_try.json --incremental
+          timeout 240 python tools/breadth_run.py --out /tmp/breadth_try.json --incremental --verbose-fail
           RC=$?
           set -e
           T1=$(date +%s)

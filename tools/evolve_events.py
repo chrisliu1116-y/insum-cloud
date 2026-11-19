@@ -14,7 +14,7 @@ LLM 走 llm_pool 四通道降级；全挂则保留昨日卡片并标 channel=loc
 import os, sys, json, time, argparse, re
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from llm_pool import chat, AllModelsFailed, status as model_status
+from llm_pool import chat, chat_heavy, AllModelsFailed, status as model_status
 
 # 4 张卡的 Scope Schema（v2 演练定稿）
 SCOPES = {
@@ -128,8 +128,8 @@ def evolve(card, news, odds, yesterday, do_llm=True):
     if not do_llm:
         return fallback
     try:
-        text, ch = chat([{'role': 'system', 'content': SYS},
-                         {'role': 'user', 'content': prompt}], max_tokens=700)
+        text, ch = chat_heavy([{'role': 'system', 'content': SYS},
+                         {'role': 'user', 'content': prompt}], max_tokens=2000, timeout=100)
         out = extract_json(text)
         if not out:
             fallback['model_channel'] = ch + '(parse-failed)'
@@ -168,8 +168,8 @@ def evolve(card, news, odds, yesterday, do_llm=True):
             fix_prompt = (prompt + '\n\n【重写指令】你上次输出有问题：' + '；'.join(problems)
                           + '。请按倒金字塔重写：第一句≤45字直接给核心结果，全文40~160字按信息密度自适应，只输出完整JSON。')
             try:
-                text2, ch2 = chat([{'role': 'system', 'content': SYS},
-                                   {'role': 'user', 'content': fix_prompt}], max_tokens=700)
+                text2, ch2 = chat_heavy([{'role': 'system', 'content': SYS},
+                                   {'role': 'user', 'content': fix_prompt}], max_tokens=2000, timeout=100)
                 out2 = extract_json(text2)
                 if out2 and out2.get('summary'):
                     s2 = re.sub(r'[①②③④⑤]', '', out2['summary']).strip()

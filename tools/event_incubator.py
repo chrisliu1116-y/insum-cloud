@@ -22,7 +22,7 @@ import os, sys, json, time, argparse, re
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from llm_pool import chat, AllModelsFailed
+from llm_pool import chat, chat_heavy, AllModelsFailed
 
 MAX_ACTIVE = 6
 DORMANT_DAYS = 7
@@ -120,8 +120,8 @@ def try_incubate(candidates, existing_themes, verbose=True):
               + '\n'.join('- ' + str(t) for t in existing_themes) + '\n\n'
               '请严格按系统规则判断是否构成新的重大事件并输出卡片配置 JSON。')
     try:
-        text, ch = chat([{'role': 'system', 'content': INCUBATOR_SYS},
-                         {'role': 'user', 'content': prompt}], max_tokens=800, verbose=verbose)
+        text, ch = chat_heavy([{'role': 'system', 'content': INCUBATOR_SYS},
+                         {'role': 'user', 'content': prompt}], max_tokens=2000, timeout=100, verbose=verbose)
     except AllModelsFailed:
         return None, 'local-rule', 'LLM全挂，跳过建卡'
     m = re.search(r'\{[\s\S]*\}', text)
@@ -281,6 +281,7 @@ def main():
     ap.add_argument('--events', default='E:/WorkBuddy工作区/2026-11-03-23-29-44/data/events_daily.json')
     ap.add_argument('--out', default='E:/WorkBuddy工作区/2026-11-03-23-29-44/data/events_daily.json')
     ap.add_argument('--min-high', type=int, default=3, help='建卡所需高优游离快讯数')
+    ap.add_argument('--window-hours', type=int, default=24, help='建卡扫描窗口(小时)，默认过去24h')
     ap.add_argument('--dry-run', action='store_true')
     a = ap.parse_args()
 
@@ -290,16 +291,30 @@ def main():
     news_by_idx = {it['title_idx']: it for it in results} if isinstance(results, list) else {}
 
     # 筛游离高优快讯（card_id=none 且 S/核心A，未去重）
+    # v447：扫描窗口=过去 window-hours 小时；源条目带 ts 时按窗口过滤，
+    #        无 ts 的条目保留（分级产物多为当日快照，不误杀）。
     raw = news_data.get('sample', [])
     candidates = []
+    cutoff = time.time() - a.window_hours * 3600
     for it in results:
         idx = it.get('title_idx')
         if it.get('card_id') != 'none' or it.get('is_dup'): continue
         if it.get('level') not in ('S', 'A'): continue
-        title = (news_by_idx.get(idx, {}) or {}).get('title') or (raw[idx] if isinstance(raw, list) and idx < len(raw) else '')
+        src_item = news_by_idx.get(idx, {}) or {}
+        if not src_item and isinstance(raw, list) and idx < len(raw): src_item = raw[idx] if isinstance(raw[idx], dict) else {}
+        # 时间过滤：有 ts 才过滤（支持秒/毫秒/字符串）
+        ts = src_item.get('ts') or src_item.get('timestamp') or it.get('ts')
+        if ts:
+            try:
+                tv = float(ts)
+                if tv > 1e11: tv /= 1000
+                if tv < cutoff: continue
+            except (ValueError, TypeError):
+                pass
+        title = src_item.get('title') or (raw[idx] if isinstance(raw, list) and idx < len(raw) else '')
         if isinstance(title, dict): title = title.get('title', '')
         candidates.append({'level': it['level'], 'title': title, 'idx': idx})
-    print('游离高优快讯:', len(candidates))
+    print('游离高优快讯(过去%dh):' % a.window_hours, len(candidates))
 
     # 双轨归档（先做，腾位置）
     logs = apply_archive_policy(events)

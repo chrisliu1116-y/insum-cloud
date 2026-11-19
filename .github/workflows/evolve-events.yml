@@ -1,7 +1,10 @@
 name: 事件卡片每日态势演进（GHA + 免费LLM）
 
 # 每天 2 次（北京 08:00 / 20:00）由 CF Worker Cron dispatch（GHA schedule 在本账号不触发）。
-# 复用 llm_pool 四通道降级，做 Scope 过滤 + 三段式重写 + 自动归档，输出 events_daily.json。
+# v452：LLM 走 llm_pool.chat_heavy —— 深度思考(thinkingLevel:high) + 重型主力探测降级链
+# (gemini-3-flash-preview → 3.8/3.6-flash → 2.5-pro/flash → 智谱兜底)，timeout=100s。
+# 与盘中快讯极速链(智谱flash+gemini-3.1-flash-lite minimal)严格隔离，不占重型额度。
+# 做 Scope 过滤 + 三段式重写 + 自动归档，输出 events_daily.json。
 # 抓取层沿用项目成熟的多源方案；本 workflow 只做"提纯重写"。
 on:
   workflow_dispatch:

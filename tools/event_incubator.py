@@ -19,6 +19,7 @@
 安全：LLM 只用输入事实，不编造；key 从 llm_pool 环境变量读，不打印。
 """
 import os, sys, json, time, argparse, re
+from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -364,7 +365,7 @@ def main():
                 break
 
     events['archive_policy_log'] = logs
-    events['generated'] = time.strftime('%Y-%m-%d %H:%M')
+    events['generated'] = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')  # v461 北京时间
     if not a.dry_run:
         json.dump(events, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
         print('已写', a.out)

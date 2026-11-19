@@ -42,13 +42,19 @@ SESSION.headers.update(UA)
 HTTP_BACKEND = "curl_cffi/chrome120"
 
 
+VERBOSE_FAIL = False   # v466：由 --verbose-fail 打开，失败时打印具体原因
+
+
 def _get(url, params, retries=1, timeout=15):
     """v361【风控第一原则：失败不重试】
     11-15 本机跑批取证：前 200 只全通，200~400 只之间失败率升到 30%，
     而 `retries=3` 会把「一次失败」放大成 3 个请求 —— 越失败越打、越打越封，
     形成正反馈。而 11-09 GHA / 11-10 本机三次成功样本都是「每只 1 请求、
     全成功」，从来没有靠重试救回来过。故默认 retries=1：失败即弃，
-    交给上层护栏判 stale，绝不放大请求数。"""
+    交给上层护栏判 stale，绝不放大请求数。
+    v466【失败必须原因明确】旧版任何失败都静默 return None，上层只看到"0只"，
+    无法区分 429风控 / 连接失败 / 空data / JSON解析错。现在失败时打印：
+    HTTP码、响应正文片段、异常类型与消息、出口IP（代理是否生效）。"""
     for k in range(retries):
         try:
             # v354：间隔下限由 120ms 提到 150ms（用户要求低并发 ≥150ms），
@@ -56,10 +62,25 @@ def _get(url, params, retries=1, timeout=15):
             time.sleep(random.uniform(0.15, 0.22))
             r = SESSION.get(url, params=params, timeout=timeout)
             if r.status_code == 200:
-                return r.json()
+                try:
+                    return r.json()
+                except Exception as je:
+                    if VERBOSE_FAIL:
+                        print("[FAIL-JSON] %s | %s | 正文前120字=%r" %
+                              (url.split('?')[0], type(je).__name__, r.text[:120]), flush=True)
+                    return None
+            # 非200：明确记录状态码 + 正文片段（风控通常返回HTML/错误JSON）
+            if VERBOSE_FAIL:
+                print("[FAIL-HTTP] %s | status=%s | 正文前160字=%r | 代理=%s" %
+                      (url.split('?')[0], r.status_code, r.text[:160],
+                       SESSION.proxies.get('https') if SESSION.proxies else '直连'), flush=True)
             if r.status_code == 429:
                 time.sleep(1.5 * (k + 1))
-        except Exception:
+        except Exception as e:
+            if VERBOSE_FAIL:
+                print("[FAIL-EXC] %s | %s: %s | 代理=%s" %
+                      (url.split('?')[0], type(e).__name__, str(e)[:160],
+                       SESSION.proxies.get('https') if SESSION.proxies else '直连'), flush=True)
             time.sleep(0.8 * (k + 1))
     return None
 
@@ -74,6 +95,15 @@ def _fetch_fs(fs, verbose=False):
             "fid": "f12", "fs": fs, "fields": "f12,f14,f2,f20",
         })
         if not d or not d.get("data"):
+            # v466：区分两种失败，日志必须说清是哪一种
+            #  ① d=None → 请求层失败（HTTP非200/异常/JSON错，详见 FAIL-* 日志）
+            #  ② d存在但无data → clist返回了业务空（total=0 或字段缺失），多是被风控静默返回
+            if VERBOSE_FAIL:
+                if d is None:
+                    print("[FS-FAIL] page=%d 请求层失败(见上FAIL行) fs=%s" % (page, fs), flush=True)
+                else:
+                    print("[FS-FAIL] page=%d 上游返回空data | keys=%s | 片段=%r" %
+                          (page, list(d.keys())[:8], json.dumps(d, ensure_ascii=False)[:200]), flush=True)
             # 单页偶发失败不能直接结束 —— 实测会在第 53 页断掉，
             # 沪深只拿到 5220 只（少 340+），家数基线直接错。
             fails += 1

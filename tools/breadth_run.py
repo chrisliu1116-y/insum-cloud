@@ -274,7 +274,13 @@ def main():
                     help="跳过跑批前的探针链(clist+kline)直接一次跑完；周日恢复探测用"
                          "（用户2026-11-17决定：探不通也跑不成，探针只是多2请求；"
                          "超时/熔断已能止损，护栏仍能拒绝脏数据）")
+    ap.add_argument("--verbose-fail", action="store_true",
+                    help="v466：失败时打印具体原因(HTTP码/正文片段/异常/代理出口IP)，"
+                         "禁止只报'0只'不给原因。用户2026-11-19明确要求。")
     args = ap.parse_args()
+    # v466：把详细失败日志开关传给 breadth_lib
+    if args.verbose_fail:
+        B.VERBOSE_FAIL = True
 
     global LMT_USE, BEG
     if args.since:

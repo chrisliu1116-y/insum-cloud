@@ -56,6 +56,14 @@ on:
         description: '跳过跑批前的2个东财探针请求(clist+kline)直接一次跑完；周日恢复探测用（用户2026-11-17决定）'
         type: boolean
         default: false
+      workers:
+        description: '并发数(留空走默认48；排障时传30降并发，用户2026-11-19要求)'
+        required: false
+        default: ''
+      verbose_fail:
+        description: '失败时打印具体原因(HTTP码/正文/异常/出口IP)，用户2026-11-19要求失败必须有原因'
+        type: boolean
+        default: false
 
 permissions:
   contents: write                # 需要把 JSON 提交回仓库
@@ -155,7 +163,7 @@ jobs:
           # 东财原样配置 = 4 并发 + 120~220ms 抖动 + retries1 + 80 根增量，一次连续跑完；
           # 腾讯 = 32 并发 + 140 令牌桶。两套都不再默认带探针（no_probe 见下）。
           BREADTH_SOURCE: ${{ inputs.source || env.DEFAULT_SOURCE }}
-          BREADTH_WORKERS: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '48' || '32' }}  # 东财48并发(代理亚太池分摊,2026-11-18从30上调;节点到期减少也不增单节点压力)
+          BREADTH_WORKERS: ${{ inputs.workers || ((inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '48' || '32') }}  # v466: inputs.workers可覆盖(排障降30);默认东财48(代理亚太池分摊)
           BREADTH_RATE: ${{ (inputs.source || env.DEFAULT_SOURCE) == 'eastmoney' && '0' || '140' }}  # 东财0=禁用令牌桶
           BREADTH_MAX_RUN_SEC: '600'   # watchdog 总时长硬闸（10min），杜绝无限跑（平台10min强杀兜底）
           BREADTH_STALL_SEC: '120'     # 进度 120s 无增长即急停
@@ -166,6 +174,7 @@ jobs:
           RECHECK: ${{ inputs.recheck }}
           FIX_LAST: ${{ inputs.fix_last }}
           NO_PROBE: ${{ inputs.no_probe || env.DEFAULT_NO_PROBE == 'true' }}
+          VERBOSE_FAIL: ${{ inputs.verbose_fail }}
         run: |
           set -euo pipefail
           # 东财源走机场代理（上一步已启动 127.0.0.1:7890）；腾讯源直连
@@ -188,6 +197,7 @@ jobs:
           if [ "${FIX_LAST:-false}" = "true" ]; then ARGS="$ARGS --incremental --fix-last"; fi
           if [ "${NO_WAIT:-false}" = "true" ]; then ARGS="$ARGS --no-wait"; fi
           if [ "${NO_PROBE:-false}" = "true" ]; then ARGS="$ARGS --no-probe"; fi
+          if [ "${VERBOSE_FAIL:-false}" = "true" ]; then ARGS="$ARGS --verbose-fail"; fi
           echo ">>> python tools/breadth_run.py $ARGS"
           python tools/breadth_run.py $ARGS
 

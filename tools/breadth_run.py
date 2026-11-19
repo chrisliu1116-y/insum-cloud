@@ -778,7 +778,7 @@ def fetch_index_bars_tencent(count=TENCENT_MAX_COUNT, timeout=TENCENT_TIMEOUT):
     """
     count = max(1, min(int(count), TENCENT_MAX_COUNT))   # 封顶，规避 count 过大返回空
     try:
-        r = B.SESSION.get(
+        r = B._session().get(   # v468: SESSION改为thread-local
             TENCENT_FQKLINE,
             params={"param": "sh000001,day,,,%d,qfq" % count},
             timeout=timeout,

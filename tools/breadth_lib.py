@@ -13,6 +13,7 @@ import json
 import math
 import random
 import time
+import threading
 
 # v357【统一 Chrome TLS 指纹】（2026-11-15 用户要求）
 # GitHub 东财跑批全部走 curl_cffi，彻底不再使用 Python 原生 urllib / 普通
@@ -21,7 +22,20 @@ import time
 # 都带 Chrome 120 的 TLS/JA3/HTTP2 指纹，以及下面三个标准浏览器请求头。
 from curl_cffi import requests
 
-EM_CLIST = "https://push2.eastmoney.com/api/qt/clist/get"
+# v468【clist分片懒切换】主域名 push2 已被风控(全节点502)，改用候选分片列表。
+# 启动零探针：直接用首位发正式请求；仅遇 502/curl56/超时 才顺位切下一个。
+# push2delay 字段一致性未验证，暂不列入（用户要求确认后再留末尾兜底）。
+CLIST_HOSTS = [
+    "82.push2.eastmoney.com",
+    "48.push2.eastmoney.com",
+    "39.push2.eastmoney.com",
+    "29.push2.eastmoney.com",
+    "7.push2.eastmoney.com",
+    "1.push2.eastmoney.com",
+    "push2.eastmoney.com",
+]
+_clist_idx = 0           # 当前生效分片索引（懒切换，模块级单线程clist阶段安全）
+_clist_lock = threading.Lock()
 EM_KLINE = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 UA = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -34,89 +48,121 @@ FS_SH = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
 # 北交所（必须单独查：和上面拼在同一条 fs 里会被过滤掉，实测合并只回 5575 只、少了 360+）
 FS_BJ = "m:0+t:81+s:2048"
 
-# v357：唯一一条请求通道。GitHub Actions 与本机都走这里，不再有
-# 「GHA 用 requests」的回退分支，也不再有 curl.exe / urllib 兜底。
-# 缺库时直接 ImportError 明确失败，绝不静默退回被 WAF 拦的原生指纹。
-SESSION = requests.Session(impersonate="chrome120")
-SESSION.headers.update(UA)
-HTTP_BACKEND = "curl_cffi/chrome120"
-
-# v466【致命bug修复】curl_cffi 的 Session 不读 HTTP_PROXY/HTTPS_PROXY 环境变量！
-# 之前 workflow 里 export HTTP_PROXY=http://127.0.0.1:7890 自以为走了机场代理，
-# 实际 SESSION.proxies 为空 → 一直 GHA 机房直连东财 → clist 502 / 0只。
-# 详细日志 "代理=直连" 暴露了这一点。现在显式读环境变量并设置。
+# v468【thread-local Session】废除全局单例——48线程共用一个 curl_cffi.Session
+# 底层 libcurl handle/TLS 状态非线程安全，会产生 BAD_DECRYPT 串包。
+# 每个线程独立持有自己的 Session，彻底消除并发串包。
 import os as _os
 _pxy = _os.environ.get('HTTPS_PROXY') or _os.environ.get('https_proxy') or _os.environ.get('HTTP_PROXY') or ''
-PROXIES = None
-if _pxy:
-    PROXIES = {'http': _pxy, 'https': _pxy}
-    SESSION.proxies = PROXIES           # 方式1：Session 属性（多数版本生效）
-    HTTP_BACKEND = 'curl_cffi/chrome120 + proxy(' + _pxy.split('@')[-1] + ')'
-    print('[proxy] SESSION 显式设置代理: %s' % _pxy.split('@')[-1], flush=True)
-else:
-    print('[proxy] 无代理环境变量，SESSION 直连', flush=True)
+PROXIES = {'http': _pxy, 'https': _pxy} if _pxy else None
+HTTP_BACKEND = 'curl_cffi/chrome120 + proxy(' + (_pxy.split('@')[-1] if _pxy else '直连') + ')'
+print('[proxy] %s' % HTTP_BACKEND, flush=True)
+
+_TLS = threading.local()
+
+def _new_session():
+    """创建一条独立 Session（带 chrome120 指纹 + 生产 header + 显式代理）。"""
+    s = requests.Session(impersonate="chrome120")
+    s.headers.update(UA)
+    if PROXIES:
+        s.proxies = PROXIES
+        try:
+            s.proxies_set = True
+        except Exception:
+            pass
+    return s
+
+def _session():
+    s = getattr(_TLS, 's', None)
+    if s is None:
+        s = _new_session()
+        _TLS.s = s
+    return s
+
+def _rebuild_session():
+    """失败后强制关闭并重建当前线程 Session——打破 Keep-Alive 粘滞，
+    让 Clash round-robin 把重试分配到新出口节点。"""
+    s = getattr(_TLS, 's', None)
+    if s is not None:
+        try: s.close()
+        except Exception: pass
+    _TLS.s = _new_session()
+    return _TLS.s
 
 
 VERBOSE_FAIL = False   # v466：由 --verbose-fail 打开，失败时打印具体原因
 
 
-def _get(url, params, retries=1, timeout=15):
-    """v361【风控第一原则：失败不重试】
-    11-15 本机跑批取证：前 200 只全通，200~400 只之间失败率升到 30%，
-    而 `retries=3` 会把「一次失败」放大成 3 个请求 —— 越失败越打、越打越封，
-    形成正反馈。而 11-09 GHA / 11-10 本机三次成功样本都是「每只 1 请求、
-    全成功」，从来没有靠重试救回来过。故默认 retries=1：失败即弃，
-    交给上层护栏判 stale，绝不放大请求数。
-    v466【失败必须原因明确】旧版任何失败都静默 return None，上层只看到"0只"，
-    无法区分 429风控 / 连接失败 / 空data / JSON解析错。现在失败时打印：
-    HTTP码、响应正文片段、异常类型与消息、出口IP（代理是否生效）。"""
-    for k in range(retries):
+def _is_clist(url):
+    return 'clist/get' in url
+
+def _clist_url():
+    global _clist_idx
+    return 'https://%s/api/qt/clist/get' % CLIST_HOSTS[_clist_idx % len(CLIST_HOSTS)]
+
+def _advance_clist(reason=''):
+    """clist 失败时顺位切下一分片。"""
+    global _clist_idx
+    with _clist_lock:
+        _clist_idx = (_clist_idx + 1) % len(CLIST_HOSTS)
+        host = CLIST_HOSTS[_clist_idx]
+    print('[clist-failover] %s → %s' % (reason[:36], host), flush=True)
+    return host
+
+def _get(url, params, retries=1, timeout=15, failover=False):
+    """v468【懒切换+thread-local+失败重建】
+    - clist(failover=True)：零探针直接用首位分片；遇 502/curl56/超时
+      → 重建当前线程Session(换出口节点)+顺位切下一分片重试；成功即锁定。
+    - kline(failover=False)：固定 push2his；每次失败重建Session打破粘滞,
+      用 retries 控制次数不放大请求数。"""
+    last = ''
+    for k in range(max(1, retries)):
+        cur = _clist_url() if failover else url
+        s = _session()
         try:
-            # v354：间隔下限由 120ms 提到 150ms（用户要求低并发 ≥150ms），
-            # 峰值仍压在 ~4 并发 / 5~7 req/s，避免刚解封的 IP 再被风控。
-            time.sleep(random.uniform(0.15, 0.22))
-            # v466：显式传 proxies（curl_cffi 不读环境变量，必须每个请求带）
-            # 兼容不同 curl_cffi 版本：若 get() 不接受 proxies 参数，退回 Session.proxies 属性
-            if PROXIES:
-                try:
-                    r = SESSION.get(url, params=params, timeout=timeout, proxies=PROXIES)
-                except TypeError:
-                    r = SESSION.get(url, params=params, timeout=timeout)
-            else:
-                r = SESSION.get(url, params=params, timeout=timeout)
+            time.sleep(random.uniform(0.10, 0.16))
+            try:
+                r = s.get(cur, params=params, timeout=timeout, proxies=PROXIES)
+            except TypeError:
+                r = s.get(cur, params=params, timeout=timeout)
             if r.status_code == 200:
                 try:
                     return r.json()
                 except Exception as je:
+                    last = 'json:' + type(je).__name__
                     if VERBOSE_FAIL:
-                        print("[FAIL-JSON] %s | %s | 正文前120字=%r" %
-                              (url.split('?')[0], type(je).__name__, r.text[:120]), flush=True)
-                    return None
-            # 非200：明确记录状态码 + 正文片段（风控通常返回HTML/错误JSON）
+                        print("[FAIL-JSON] %s | %s | %r" % (cur.split('?')[0], type(je).__name__, r.text[:100]), flush=True)
+                    _rebuild_session()
+                    if failover: _advance_clist(last)
+                    continue
+            last = 'http:%s' % r.status_code
             if VERBOSE_FAIL:
-                print("[FAIL-HTTP] %s | status=%s | 正文前160字=%r | 代理=%s" %
-                      (url.split('?')[0], r.status_code, r.text[:160],
-                       SESSION.proxies.get('https') if SESSION.proxies else '直连'), flush=True)
+                print("[FAIL-HTTP] %s | status=%s | %r" % (cur.split('?')[0], r.status_code, r.text[:140]), flush=True)
+            _rebuild_session()   # 打破Keep-Alive粘滞,换节点
+            if failover and r.status_code in (429, 500, 502, 503, 504):
+                _advance_clist(last)
             if r.status_code == 429:
-                time.sleep(1.5 * (k + 1))
+                time.sleep(1.0 * (k + 1))
         except Exception as e:
+            last = 'exc:' + type(e).__name__
             if VERBOSE_FAIL:
-                print("[FAIL-EXC] %s | %s: %s | 代理=%s" %
-                      (url.split('?')[0], type(e).__name__, str(e)[:160],
-                       SESSION.proxies.get('https') if SESSION.proxies else '直连'), flush=True)
-            time.sleep(0.8 * (k + 1))
+                print("[FAIL-EXC] %s | %s: %s" % (cur.split('?')[0], type(e).__name__, str(e)[:130]), flush=True)
+            _rebuild_session()   # curl56/timeout→重建换节点
+            if failover: _advance_clist(last)
+            time.sleep(0.4 * (k + 1))
+    if VERBOSE_FAIL:
+        print('[FAIL-FINAL] %s 重试失败: %s' % (_clist_url() if failover else url.split('?')[0], last), flush=True)
     return None
 
 
 def _fetch_fs(fs, verbose=False):
     out, page, total, fails = [], 1, None, 0
     while True:
-        d = _get(EM_CLIST, {
+        d = _get(_clist_url(), {
             "pn": page, "pz": 100, "po": 1, "np": 1, "fltt": 2, "invt": 2,
             # 必须按代码排序（f12）分页：按涨跌幅（f3）排会因盘中排序变动
             # 导致跨页重复/漏项，实测沪深只拿到 5220 只（少 340+）。
             "fid": "f12", "fs": fs, "fields": "f12,f14,f2,f20",
-        })
+        }, retries=2, failover=True)
         if not d or not d.get("data"):
             # v466：区分两种失败，日志必须说清是哪一种
             #  ① d=None → 请求层失败（HTTP非200/异常/JSON错，详见 FAIL-* 日志）
@@ -179,10 +225,10 @@ def probe_universe():
     11-13 / 11-15 两次 GHA 失败都是「股票池 0 只」（clist 端点级限流）：
     不先探一下就直接翻 56 页 + 5564 次 kline，全是无效请求还会加重风控。
     本机零调用（这个函数只在 GHA runner 里跑），不会碰本机行情出口。"""
-    d = _get(EM_CLIST, {
+    d = _get(_clist_url(), {
         "pn": 1, "pz": 1, "po": 1, "np": 1, "fltt": 2, "invt": 2,
         "fid": "f12", "fs": FS_SH, "fields": "f12,f14",
-    }, retries=1)
+    }, retries=2, failover=True)
     try:
         return int(((d or {}).get("data") or {}).get("total") or 0)
     except Exception:

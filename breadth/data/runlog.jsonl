@@ -1,2 +1,3 @@
 {"ts": "2026-11-17 15:02:22", "source": "tencent", "workers": 32, "conclusion": "success", "reason": "", "elapsed_sec": 47, "avg_rps": 123, "ok": 5766, "bad": 0, "n501": 0, "universe": 5766, "trade_date": "2026-11-17", "new_days": 1}
 {"ts": "2026-11-18 15:03:52", "source": "eastmoney", "workers": 48, "conclusion": "success", "reason": "", "elapsed_sec": 76, "avg_rps": 73, "ok": 5583, "bad": 2, "n501": 0, "universe": 5585, "trade_date": "2026-11-18", "new_days": 1}
+{"ts": "2026-11-19 15:02:22", "source": "eastmoney", "workers": 48, "conclusion": "stale", "reason": "股票池缩水 397 < 5000（东财 clist/get 疑似风控）", "elapsed_sec": 20, "avg_rps": 19, "ok": 394, "bad": 3, "n501": 0, "universe": 397, "trade_date": "", "new_days": 0}

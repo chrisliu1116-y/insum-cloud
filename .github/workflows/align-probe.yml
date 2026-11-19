@@ -1,0 +1,20 @@
+name: 对齐探测(pytdx小包+Tushare字段·仅GHA只读)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装依赖
+        run: pip install pytdx tushare pandas
+      - name: 探测
+        env:
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+        run: timeout 420 python3 tools/align_probe.py

@@ -65,4 +65,17 @@ try:
 except Exception as e:
     tag('4_mihomo管理API不可达', str(e)[:100])
 
+# ---------- 二次确认：requests直连 clist pz=100 + kline(验证非pz=1侥幸) ----------
+try:
+    import requests as stdreq
+    if left() < 8: raise RuntimeError('time left low')
+    EM100 = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6&fields=f12,f14,f3'
+    r = stdreq.get(EM100, headers=HDR, timeout=min(8, max(2, left()-2)))
+    tag('5_requests直连_clist_pz100 => HTTP', r.status_code, '| diff条数=', len((r.json().get('data') or {}).get('diff') or []))
+    KL = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=0.000001&fields1=f1&fields2=f51,f52&klt=101&fqt=1&lmt=5&end=20500101'
+    r2 = stdreq.get(KL, headers=HDR, timeout=min(8, max(2, left()-2)))
+    tag('6_requests直连_kline_lmt5 => HTTP', r2.status_code, '| klines=', len(((r2.json().get('data') or {}).get('klines')) or []))
+except Exception as e:
+    tag('5/6二次确认 EXC', type(e).__name__, str(e)[:100])
+
 tag('探测结束 用时%.1fs'%(time.time()-T0))

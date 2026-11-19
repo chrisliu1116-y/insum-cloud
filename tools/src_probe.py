@@ -64,7 +64,7 @@ for code,tc,_ in SAMPLES:
         if not m:
             tag('4_新浪日线',tc,'HTTP',st,'| 无JSON数组 raw=',repr(txt[:120]));continue
         arr=json.loads(m.group(1))
-        tag('4_新浪日线',tc,'HTTP',st,'| 根数',len(arr),'| 首末',(arr[0].get('day') if arr else '-'),(arr[-1].get('day') if arr else '-'))
+        tag('4_新浪日线',tc,'HTTP',st,'| 根数',len(arr),'| 首末',(arr[0].get('day') if arr else '-'),(arr[-1].get('day') if arr else '-'),'| 字段',list(arr[0].keys()) if arr else '-')
     except Exception as e:
         tag('4_新浪日线',tc,'EXC',type(e).__name__,str(e)[:80])
 
@@ -72,8 +72,7 @@ for code,tc,_ in SAMPLES:
 for code,tc,_ in SAMPLES:
     try:
         # 搜狐要求 code 为纯数字 + 市场前缀参数
-        mkt='1' if code.startswith('6') else ('0' if code.startswith(('0','3')) else '1')
-        u='https://q.stock.sohu.com/hisHq?code=%s_%s&start=19900101&end=20991231&stat=1&order=D&period=d&callback=&rt=jsonp'%(mkt,code)
+        u='https://q.stock.sohu.com/hisHq?code=cn_%s&start=19900101&end=20991231&stat=1&order=D&period=d&callback=&rt=jsonp'%code
         st,txt=fetch(u,{'Referer':'https://q.stock.sohu.com/'},timeout=15)
         try:
             d=json.loads(txt)

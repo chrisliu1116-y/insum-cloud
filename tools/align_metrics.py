@@ -71,20 +71,17 @@ for code,seq in bars.items():
     seq.sort(key=lambda x:x[0])
     cl=[x[1] for x in seq];hi=[x[2] for x in seq];lo=[x[3] for x in seq]
     r=rsi9(cl);w10=wr(cl,hi,lo,10);w20=wr(cl,hi,lo,20)
-    cnt21=0
+    # 先算每天的hit布尔
+    hits=[]
+    for i in range(len(seq)):
+        ok = (r[i] is not None and w10[i] is not None and w20[i] is not None
+              and r[i]>70 and w10[i]<20 and w20[i]<20)
+        hits.append(ok)
     for i,(dt,_,_,_) in enumerate(seq):
-        hit = r[i] is not None and r[i]>70 and w10[i]<20 and w20[i]<20
-        if hit:
-            daily_total[dt]+=1
-        if dt in set(EM_DATES):
-            # COUNT(day_tj,21): 近21日内hit次数
-            recent=seq[max(0,i-20):i+1]
-            idxmap={x[0]:j for j,x in enumerate(seq)}
-            c=0
-            for rd,_,_,_ in recent:
-                j=idxmap[rd]
-                if r[j] is not None and r[j]>70 and w10[j]<20 and w20[j]<20:c+=1
-            daily_daycnt[dt]+=c
+        if hits[i]:daily_total[dt]+=1
+        if dt in EM_DATES:
+            # COUNT(day_tj,21): 近21日内hit次数(含当日)
+            daily_daycnt[dt]+=sum(1 for h in hits[max(0,i-20):i+1] if h)
 
 tag('对齐对比(无市值过滤): 日期 | Tushare total/daycnt | 东财 total/daycnt')
 for d,et,ed in zip(EM_DATES,EM_TOTAL,EM_DAYCNT):

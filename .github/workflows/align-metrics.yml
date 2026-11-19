@@ -1,0 +1,20 @@
+name: Tushare重算指标vs东财底稿对齐(仅GHA·只读)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装依赖
+        run: pip install tushare pandas six lxml
+      - name: 对齐重算
+        env:
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+        run: timeout 600 python3 tools/align_metrics.py

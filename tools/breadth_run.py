@@ -387,6 +387,11 @@ def main():
             if _v < _min:
                 log(f"{_nm} 未通过：疑似端点级限流，本次不跑批，退出码 3")
                 sys.exit(3)
+        # v469【协议攻坚】生命周期一次：pz=1 小包探测 http明文/socks5h/直连/https代理
+        # 锁定能拿到合法JSON的组合，物理规避 BoringSSL 走 CONNECT 隧道收 pz=100 大包的冲突
+        if hasattr(B, 'probe_transport'):
+            log("协议探测（pz=1小包）：http明文 → socks5h → 直连 → https代理")
+            B.probe_transport()
         log("拉取股票池…")
         uni = P.fetch_universe(verbose=True)
         agg = {}

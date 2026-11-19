@@ -53,39 +53,57 @@ FS_BJ = "m:0+t:81+s:2048"
 # 每个线程独立持有自己的 Session，彻底消除并发串包。
 import os as _os
 _pxy = _os.environ.get('HTTPS_PROXY') or _os.environ.get('https_proxy') or _os.environ.get('HTTP_PROXY') or ''
-PROXIES = {'http': _pxy, 'https': _pxy} if _pxy else None
-HTTP_BACKEND = 'curl_cffi/chrome120 + proxy(' + (_pxy.split('@')[-1] if _pxy else '直连') + ')'
-print('[proxy] %s' % HTTP_BACKEND, flush=True)
+
+# v469【协议攻坚】可切换传输模式。BAD_DECRYPT 是 BoringSSL 走 HTTP CONNECT 隧道收大包
+# 的已知冲突；按 用户指定优先级探测：http明文 → socks5h → 直连 → 现状https代理。
+HTTP_PROXY_URL = _pxy
+SOCKS_PROXY_URL = ('socks5h://' + _pxy.split('://')[-1]) if _pxy else ''
+# 模式 → proxies 字典（None=直连）
+MODE_PROXIES = {
+    'http':  {'http': HTTP_PROXY_URL, 'https': HTTP_PROXY_URL} if HTTP_PROXY_URL else None,
+    'socks': {'http': SOCKS_PROXY_URL, 'https': SOCKS_PROXY_URL} if SOCKS_PROXY_URL else None,
+    'direct': None,
+    'https': {'http': HTTP_PROXY_URL, 'https': HTTP_PROXY_URL} if HTTP_PROXY_URL else None,
+}
+# 探测优先级（用户指定顺序）
+MODE_ORDER = ['http', 'socks', 'direct', 'https']
+# 首个成功模式，None=未探测；_scheme 决定 http/https
+_ACTIVE_MODE = None
+_ACTIVE_SCHEME = None
+_MODE_LOCK = threading.Lock()
+print('[proxy] 原始=%s | socks=%s' % (HTTP_PROXY_URL, SOCKS_PROXY_URL), flush=True)
 
 _TLS = threading.local()
 
-def _new_session():
-    """创建一条独立 Session（带 chrome120 指纹 + 生产 header + 显式代理）。"""
+def _proxies_for(mode):
+    return MODE_PROXIES.get(mode)
+
+def _new_session(mode):
+    """创建独立 Session（chrome120 指纹 + 生产 header + 指定代理模式）。"""
     s = requests.Session(impersonate="chrome120")
     s.headers.update(UA)
-    if PROXIES:
-        s.proxies = PROXIES
-        try:
-            s.proxies_set = True
-        except Exception:
-            pass
+    p = _proxies_for(mode)
+    if p:
+        s.proxies = p
     return s
 
 def _session():
+    mode = _ACTIVE_MODE or 'http'   # 探测前默认用首个候选
     s = getattr(_TLS, 's', None)
-    if s is None:
-        s = _new_session()
+    if s is None or getattr(_TLS, 'mode', None) != mode:
+        s = _new_session(mode)
         _TLS.s = s
+        _TLS.mode = mode
     return s
 
 def _rebuild_session():
-    """失败后强制关闭并重建当前线程 Session——打破 Keep-Alive 粘滞，
-    让 Clash round-robin 把重试分配到新出口节点。"""
+    """失败后 close+重建当前线程 Session——打破粘滞、换节点。"""
     s = getattr(_TLS, 's', None)
     if s is not None:
         try: s.close()
         except Exception: pass
-    _TLS.s = _new_session()
+    _TLS.s = _new_session(_ACTIVE_MODE or 'http')
+    _TLS.mode = _ACTIVE_MODE or 'http'
     return _TLS.s
 
 
@@ -97,7 +115,8 @@ def _is_clist(url):
 
 def _clist_url():
     global _clist_idx
-    return 'https://%s/api/qt/clist/get' % CLIST_HOSTS[_clist_idx % len(CLIST_HOSTS)]
+    scheme = _ACTIVE_SCHEME or 'https'
+    return '%s://%s/api/qt/clist/get' % (scheme, CLIST_HOSTS[_clist_idx % len(CLIST_HOSTS)])
 
 def _advance_clist(reason=''):
     """clist 失败时顺位切下一分片。"""
@@ -108,22 +127,55 @@ def _advance_clist(reason=''):
     print('[clist-failover] %s → %s' % (reason[:36], host), flush=True)
     return host
 
+def probe_transport():
+    """v469【生命周期一次】用 pz=1 小包按优先级探测 http明文/socks5h/直连/https代理，
+    找第一个能拿到合法JSON的组合。小包是18:27成功的场景，物理避开大包TLS冲突。
+    返回 (mode, scheme)；全失败返回 ('https','https') 保持现状继续(由上层护栏止损)。"""
+    global _ACTIVE_MODE, _ACTIVE_SCHEME
+    params = {'pn':1,'pz':1,'po':1,'np':1,'fltt':2,'invt':2,
+              'fid':'f12','fs':FS_SH,'fields':'f12,f14'}
+    host = CLIST_HOSTS[0]
+    tried = []
+    # 每个模式试 http 与 https 两种 scheme（http优先，物理无TLS）
+    for mode in MODE_ORDER:
+        for scheme in (['http','https'] if mode=='http' else ['https']):
+            label = '%s+%s' % (scheme, mode)
+            try:
+                sess = _new_session(mode)
+                url = '%s://%s/api/qt/clist/get' % (scheme, host)
+                r = sess.get(url, params=params, timeout=8)
+                ok = False
+                if r.status_code == 200:
+                    try: ok = bool((r.json() or {}).get('data'))
+                    except Exception: ok = False
+                detail = 'OK' if ok else 'status=%s body=%r' % (r.status_code, r.text[:60])
+            except Exception as e:
+                ok = False; detail = '%s:%s' % (type(e).__name__, str(e)[:60])
+            tried.append('%s:%s' % (label, detail))
+            print('[transport-probe] %s %s' % (label, detail), flush=True)
+            if ok:
+                _ACTIVE_MODE, _ACTIVE_SCHEME = mode, scheme
+                print('[transport-probe] ★ 锁定 mode=%s scheme=%s' % (mode, scheme), flush=True)
+                return mode, scheme
+            try: sess.close()
+            except Exception: pass
+    # 全失败：保持 https+http代理 现状，让后续跑批/护栏正常止损
+    _ACTIVE_MODE, _ACTIVE_SCHEME = 'https', 'https'
+    print('[transport-probe] 全部失败，回退 https+代理 | 明细=%s' % ' ; '.join(tried), flush=True)
+    return _ACTIVE_MODE, _ACTIVE_SCHEME
+
 def _get(url, params, retries=1, timeout=15, failover=False):
-    """v468【懒切换+thread-local+失败重建】
-    - clist(failover=True)：零探针直接用首位分片；遇 502/curl56/超时
-      → 重建当前线程Session(换出口节点)+顺位切下一分片重试；成功即锁定。
-    - kline(failover=False)：固定 push2his；每次失败重建Session打破粘滞,
-      用 retries 控制次数不放大请求数。"""
+    """v469【协议自适应+懒切换+thread-local+失败重建】
+    URL scheme 与代理模式由 probe_transport() 结果决定(_ACTIVE_SCHEME/_ACTIVE_MODE)。"""
     last = ''
     for k in range(max(1, retries)):
         cur = _clist_url() if failover else url
+        if not failover and _ACTIVE_SCHEME and 'push2his' in cur:
+            cur = cur.replace('https://', '%s://' % _ACTIVE_SCHEME, 1)  # kline 跟随 scheme
         s = _session()
         try:
             time.sleep(random.uniform(0.10, 0.16))
-            try:
-                r = s.get(cur, params=params, timeout=timeout, proxies=PROXIES)
-            except TypeError:
-                r = s.get(cur, params=params, timeout=timeout)
+            r = s.get(cur, params=params, timeout=timeout)  # 代理由 session.proxies 提供
             if r.status_code == 200:
                 try:
                     return r.json()
@@ -137,7 +189,7 @@ def _get(url, params, retries=1, timeout=15, failover=False):
             last = 'http:%s' % r.status_code
             if VERBOSE_FAIL:
                 print("[FAIL-HTTP] %s | status=%s | %r" % (cur.split('?')[0], r.status_code, r.text[:140]), flush=True)
-            _rebuild_session()   # 打破Keep-Alive粘滞,换节点
+            _rebuild_session()
             if failover and r.status_code in (429, 500, 502, 503, 504):
                 _advance_clist(last)
             if r.status_code == 429:
@@ -146,11 +198,11 @@ def _get(url, params, retries=1, timeout=15, failover=False):
             last = 'exc:' + type(e).__name__
             if VERBOSE_FAIL:
                 print("[FAIL-EXC] %s | %s: %s" % (cur.split('?')[0], type(e).__name__, str(e)[:130]), flush=True)
-            _rebuild_session()   # curl56/timeout→重建换节点
+            _rebuild_session()
             if failover: _advance_clist(last)
             time.sleep(0.4 * (k + 1))
     if VERBOSE_FAIL:
-        print('[FAIL-FINAL] %s 重试失败: %s' % (_clist_url() if failover else url.split('?')[0], last), flush=True)
+        print('[FAIL-FINAL] %s 重试失败: %s' % (_clist_url() if failover else cur.split('?')[0], last), flush=True)
     return None
 
 

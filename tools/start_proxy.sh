@@ -86,6 +86,8 @@ for k in sorted(x for x in d if x.startswith('up')):
 "
 COUNT="$(curl -s http://127.0.0.1:9090/proxies/auto \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('all',[])))")"
-echo "[proxy] auto 组亚太可用 $COUNT 个"
-if [ "${COUNT:-0}" -lt 3 ]; then echo "::error::auto 组节点不足"; exit 1; fi
+COUNT_BK="$(curl -s http://127.0.0.1:9090/proxies/auto-backup \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('all',[])))")"
+echo "[proxy] v469 auto(亚太主池) 存活节点=$COUNT | auto-backup(备用池) 存活节点=$COUNT_BK"
+if [ "${COUNT:-0}" -lt 3 ]; then echo "::error::auto 组节点不足(exclude-filter可能误杀)"; exit 1; fi
 echo "[proxy] READY — 后续跑批步骤请注入 HTTP_PROXY/HTTPS_PROXY=http://127.0.0.1:7890"

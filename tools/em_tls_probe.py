@@ -32,7 +32,7 @@ try:
         try:
             r = stdreq.get(EM, headers=HDR, proxies=proxies, timeout=min(6, max(1, left()-1)))
             v, b = verdict(r.text, r.status_code)
-            tag(name, '=>', v, '|', b[:120])
+            tag(name, '=>', v, '| server=', str(r.headers.get('server'))[:30], '|', b[:200])
         except Exception as e:
             tag(name, '=> EXC', type(e).__name__, str(e)[:120])
 except Exception as e:
@@ -44,7 +44,7 @@ try:
     for imp in ('safari15_5', 'edge101'):
         if left() < 5: break
         try:
-            r = cffi.get(EM, headers=HDR, impersonate=imp, http_version='1.1',
+            r = cffi.get(EM, headers=HDR, impersonate=imp, http_version=1,
                          proxies={'http': PROXY, 'https': PROXY}, timeout=min(6, max(1, left()-1)))
             v, b = verdict(r.text, r.status_code)
             tag('3_curl_cffi_%s_http1.1+代理'%imp, '=>', v, '|', b[:120])

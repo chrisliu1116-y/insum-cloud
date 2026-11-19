@@ -93,10 +93,13 @@ jobs:
           BREADTH_SOURCE: eastmoney
           BREADTH_WORKERS: ${{ inputs.mode == 'direct' && '30' || '40' }}
           EM_HTTP_LIB: requests            # v480：标准 OpenSSL，不用 curl_cffi
-          HTTP_PROXY: ${{ inputs.mode == 'direct' && '' || 'http://127.0.0.1:7890' }}
-          HTTPS_PROXY: ${{ inputs.mode == 'direct' && '' || 'http://127.0.0.1:7890' }}
         run: |
           set -uo pipefail
+          # v480f：直连模式彻底清除GHA runner预设的代理环境变量（否则requests trust_env继承→ProxyError）
+          if [ "${{ inputs.mode }}" = "direct" ]; then
+            unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy FTP_PROXY ftp_proxy || true
+            echo "直连模式：已清除所有代理环境变量"
+          fi
           cp breadth/data/_archive_breadth_em_20261114.json /tmp/breadth_try.json
           echo "全量试跑启动：OpenSSL+${{ inputs.mode }} ${{ inputs.mode == 'direct' && '30' || '40' }}并发，起点 东财底稿 8818日/5584只"
           T0=$(date +%s)

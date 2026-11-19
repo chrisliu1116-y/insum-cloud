@@ -41,6 +41,21 @@ SESSION = requests.Session(impersonate="chrome120")
 SESSION.headers.update(UA)
 HTTP_BACKEND = "curl_cffi/chrome120"
 
+# v466【致命bug修复】curl_cffi 的 Session 不读 HTTP_PROXY/HTTPS_PROXY 环境变量！
+# 之前 workflow 里 export HTTP_PROXY=http://127.0.0.1:7890 自以为走了机场代理，
+# 实际 SESSION.proxies 为空 → 一直 GHA 机房直连东财 → clist 502 / 0只。
+# 详细日志 "代理=直连" 暴露了这一点。现在显式读环境变量并设置。
+import os as _os
+_pxy = _os.environ.get('HTTPS_PROXY') or _os.environ.get('https_proxy') or _os.environ.get('HTTP_PROXY') or ''
+PROXIES = None
+if _pxy:
+    PROXIES = {'http': _pxy, 'https': _pxy}
+    SESSION.proxies = PROXIES           # 方式1：Session 属性（多数版本生效）
+    HTTP_BACKEND = 'curl_cffi/chrome120 + proxy(' + _pxy.split('@')[-1] + ')'
+    print('[proxy] SESSION 显式设置代理: %s' % _pxy.split('@')[-1], flush=True)
+else:
+    print('[proxy] 无代理环境变量，SESSION 直连', flush=True)
+
 
 VERBOSE_FAIL = False   # v466：由 --verbose-fail 打开，失败时打印具体原因
 
@@ -60,7 +75,15 @@ def _get(url, params, retries=1, timeout=15):
             # v354：间隔下限由 120ms 提到 150ms（用户要求低并发 ≥150ms），
             # 峰值仍压在 ~4 并发 / 5~7 req/s，避免刚解封的 IP 再被风控。
             time.sleep(random.uniform(0.15, 0.22))
-            r = SESSION.get(url, params=params, timeout=timeout)
+            # v466：显式传 proxies（curl_cffi 不读环境变量，必须每个请求带）
+            # 兼容不同 curl_cffi 版本：若 get() 不接受 proxies 参数，退回 Session.proxies 属性
+            if PROXIES:
+                try:
+                    r = SESSION.get(url, params=params, timeout=timeout, proxies=PROXIES)
+                except TypeError:
+                    r = SESSION.get(url, params=params, timeout=timeout)
+            else:
+                r = SESSION.get(url, params=params, timeout=timeout)
             if r.status_code == 200:
                 try:
                     return r.json()

@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: 安装依赖
-        run: pip install tushare pandas requests
+        run: pip install tushare pandas requests six lxml
       - name: 对齐验证
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}

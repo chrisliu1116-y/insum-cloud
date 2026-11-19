@@ -1,61 +1,50 @@
 # -*- coding: utf-8 -*-
-"""规则文档变更检测 + 快照一致性守卫（用户 2026-11-18 定调）。
+"""提示词快照守卫（v2.0 最终版 · 2026-11-19 用户拍板）。
 
-设计取舍（诚实说明）：
-  · 完整 .md 是「给人看的审查版」，含大量源码行号、历史迭代、函数表；
-    确定性脚本提纯会带进噪音（实测 5696 token 且夹带源码吐槽），质量不如人工提纯。
-  · 因此 prompt_rules.md 由人工精心提纯（约 1200 token），本脚本负责：
-      1) 记录两份完整文档的 md5 基线；
-      2) --check：文档变了就提醒「请复核快照」，绝不自动覆盖（防垃圾注入）；
-      3) --stamp：人工复核完快照后，刷新 md5 基线（表示已同步）。
-  · GHA 每次跑批前 --check；文档 push 时同步快照到 CF KV，并跑 --check 提醒复核。
+架构定调：
+  · prompt_rules.md = 云端 LLM 分级的**唯一真相源**（人工提纯的完整 v2.0 System Prompt）。
+  · 本脚本**绝不**从 docs 重新生成/覆盖它——历史版本的"提纯生成"会带进源码吐槽与
+    去重段落(is_dup/dup_of)，造成 prompt 回退，v2.0 起彻底废除该路径。
+  · 只做两件事：--check 校验快照仍是 v2.0（防被旧文件覆盖）；--stamp 记录基线。
 
 用法：
-  python3 tools/build_prompt_rules.py --check   # 退出码1=文档已变需复核
-  python3 tools/build_prompt_rules.py --stamp   # 复核完，记录新基线
+  python3 tools/build_prompt_rules.py --check   # 退出码1=快照非v2.0或被篡改
+  python3 tools/build_prompt_rules.py --stamp   # 记录当前快照基线
 """
-import os, re, argparse, hashlib, time
+import os, argparse, hashlib, json
 
-# 真相源在 insum-cloud/docs（GHA 可监听）；前端项目改完后用 sync 脚本同步过来
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DOCS = [os.path.join(ROOT, 'docs/分级标准.md'), os.path.join(ROOT, 'docs/去重规则全览.md')]
+SNAP = os.path.join(ROOT, 'prompt_rules.md')
 BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.rules_baseline.json')
-SNAP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'prompt_rules.md')
+# v2.0 快照必须出现的指纹（缺任一即判定回退/被篡改）
+V2_MARKERS = ['多资产宏观交易风控分级引擎', 'S1（宏观与货币核弹）', 'S4（系统性金融信用危机）',
+              's_code', 'title_prefix', '分布纪律（防通胀）', 'GTA VI']
+# 已废弃的去重段落——出现即视为回退
+FORBIDDEN = ['is_dup', 'dup_of', '去重规则快照']
 
 def _md5(p):
     return hashlib.md5(open(p, 'rb').read()).hexdigest()
-
-def _cur():
-    return {os.path.basename(p): _md5(p) for p in DOCS}
-
-def _est_tokens(s):
-    zh = sum('\u4e00' <= c <= '\u9fff' for c in s)
-    return int(zh / 1.5 + (len(s) - zh) / 2)
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--check', action='store_true')
     ap.add_argument('--stamp', action='store_true')
     a = ap.parse_args()
-    cur = _cur()
-    old = {}
-    if os.path.exists(BASE):
-        import json
-        old = json.load(open(BASE, encoding='utf-8'))
-    changed = [k for k, v in cur.items() if old.get(k) != v]
-    snap_tokens = _est_tokens(open(SNAP, encoding='utf-8').read()) if os.path.exists(SNAP) else -1
-
+    if not os.path.exists(SNAP):
+        print('[check] ✗ prompt_rules.md 不存在'); return 1
+    txt = open(SNAP, encoding='utf-8').read()
+    missing = [m for m in V2_MARKERS if m not in txt]
+    bad = [m for m in FORBIDDEN if m in txt]
     if a.stamp:
-        import json
-        json.dump(cur, open(BASE, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
-        print('[stamp] 已记录文档基线 %s（快照约%d token）' % (cur, snap_tokens))
-        return 0
-    # 默认/check
-    if changed:
-        print('[check] ⚠️ 规则文档已变更: %s' % ', '.join(changed))
-        print('[check] 请人工复核 prompt_rules.md 判据是否需同步，然后运行 --stamp')
+        json.dump({'md5': _md5(SNAP), 'version': 'v2.0'}, open(BASE, 'w', encoding='utf-8'),
+                  ensure_ascii=False, indent=2)
+        print('[stamp] 已记录 v2.0 快照基线 md5=%s' % _md5(SNAP)[:12])
+        return 0 if not missing and not bad else 1
+    # 默认 check
+    if missing or bad:
+        print('[check] ✗ 快照非 v2.0 或被回退！缺失标记=%s 违禁段落=%s' % (missing, bad))
         return 1
-    print('[check] ✅ 规则文档与快照基线一致（快照约%d token）' % snap_tokens)
+    print('[check] ✅ prompt_rules.md 为 v2.0 完整版（%d字, md5=%s）' % (len(txt), _md5(SNAP)[:12]))
     return 0
 
 if __name__ == '__main__':

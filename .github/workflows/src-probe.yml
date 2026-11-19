@@ -1,0 +1,21 @@
+name: 替代数据源极小样本连通性速测（仅GHA·只读·不跑批不提交）
+
+# 2026-11-20 用户拍板的4源评估速测：腾讯qt/新浪/搜狐 × 2北交所+2沪深。
+# 只在GHA云端发极小样本请求，本机零网络；不跑批、不提交、不碰生产数据。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 极小样本速测（腾讯/新浪/搜狐 × 4样本）
+        run: timeout 180 python3 tools/src_probe.py

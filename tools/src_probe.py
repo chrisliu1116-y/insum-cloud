@@ -58,10 +58,12 @@ except Exception as e:
 for code,tc,_ in SAMPLES:
     try:
         # 新浪日K接口(带symbol)
-        u='https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20_k=/CN_MarketDataService.getKLineData?symbol=%s&scale=240&ma=no&datalen=1023'%tc
+        u='https://quotes.sina.cn/cn/api/jsonp_v2.php/var%%20_k=/CN_MarketDataService.getKLineData?symbol=%s&scale=240&ma=no&datalen=1023'%tc
         st,txt=fetch(u,{'Referer':'https://finance.sina.com.cn/'},timeout=12)
         m=re.search(r'\((\[[\s\S]*\])\)',txt)
-        arr=json.loads(m.group(1)) if m else []
+        if not m:
+            tag('4_新浪日线',tc,'HTTP',st,'| 无JSON数组 raw=',repr(txt[:120]));continue
+        arr=json.loads(m.group(1))
         tag('4_新浪日线',tc,'HTTP',st,'| 根数',len(arr),'| 首末',(arr[0].get('day') if arr else '-'),(arr[-1].get('day') if arr else '-'))
     except Exception as e:
         tag('4_新浪日线',tc,'EXC',type(e).__name__,str(e)[:80])
@@ -73,8 +75,12 @@ for code,tc,_ in SAMPLES:
         mkt='1' if code.startswith('6') else ('0' if code.startswith(('0','3')) else '1')
         u='https://q.stock.sohu.com/hisHq?code=%s_%s&start=19900101&end=20991231&stat=1&order=D&period=d&callback=&rt=jsonp'%(mkt,code)
         st,txt=fetch(u,{'Referer':'https://q.stock.sohu.com/'},timeout=15)
-        d=json.loads(txt)
-        arr=(d[0].get('hq') or []) if isinstance(d,list) and d else []
+        try:
+            d=json.loads(txt)
+            arr=(d[0].get('hq') or []) if isinstance(d,list) and d else []
+        except Exception:
+            tag('5_搜狐日线',code,'HTTP',st,'| 非JSON raw=',repr(txt[:150]))
+            continue
         tag('5_搜狐日线',code,'HTTP',st,'| 根数',len(arr),'| 首末',(arr[-1][0] if arr else '-'),(arr[0][0] if arr else '-'))
     except Exception as e:
         tag('5_搜狐日线',code,'EXC',type(e).__name__,str(e)[:80])

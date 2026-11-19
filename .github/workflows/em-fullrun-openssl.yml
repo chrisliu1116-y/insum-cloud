@@ -1,0 +1,119 @@
+name: 东财全量试跑·OpenSSL+代理32并发（只读·不提交·不覆盖线上）
+
+# 2026-11-20 用户拍板：标准 requests(OpenSSL) + 103节点LoadBalance代理，32~48并发全量试跑。
+# 关键约束：① 仅在GHA跑，本机零请求；② 不提交任何数据、不覆盖线上腾讯生产数据；
+#           ③ 目标3分钟内跑完5584只；④ 代理先测活+502自动重试。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fullrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装依赖
+        run: pip install requests pyyaml numpy pandas
+
+      - name: 校验 SUB_URLS（不打印值）
+        env:
+          SUB_URLS: ${{ secrets.SUB_URLS }}
+        run: |
+          N="$(printf '%s\n' "${SUB_URLS:-}" | grep -c '^https\?://' || true)"
+          if [ "${N:-0}" -lt 1 ]; then echo "::error::SUB_URLS 未配置"; exit 1; fi
+          echo "SUB_URLS 已配置 $N 个订阅（值不打印）"
+
+      - name: 下载 mihomo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          URL="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
+            | python3 -c 'import sys,json; d=json.load(sys.stdin); \
+              a=[x["browser_download_url"] for x in d["assets"] if "linux-amd64" in x["name"] and "compatible" not in x["name"] and x["name"].endswith(".gz")]; \
+              a=a or [x["browser_download_url"] for x in d["assets"] if "linux-amd64-compatible" in x["name"] and x["name"].endswith(".gz")]; print(a[0] if a else "")')"
+          curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
+
+      - name: 起代理 + 节点测活（关键：等健康节点，剔除坏节点）
+        env:
+          SUB_URLS: ${{ secrets.SUB_URLS }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mihomo-conf
+          python3 tools/make_native_config.py /tmp/mihomo-conf/config.yaml
+          /tmp/mihomo -d /tmp/mihomo-conf > /tmp/mihomo.log 2>&1 &
+          echo $! > /tmp/mihomo.pid
+          python3 tools/ensure_providers.py
+          # 关键修复：强制对所有 proxy 测活，等至少 N 个健康节点再开跑
+          curl -s -X PUT "http://127.0.0.1:9090/proxies/auto/healthcheck" >/dev/null 2>&1 || true
+          curl -s -X PUT "http://127.0.0.1:9090/group/auto/healthcheck" >/dev/null 2>&1 || true
+          OK=0
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -x http://127.0.0.1:7890 --max-time 8 https://cp.cloudflare.com/generate_204 || true)
+            if [ "$code" = "204" ]; then OK=$((OK+1)); fi
+            if [ "$OK" -ge 3 ]; then break; fi
+            sleep 2
+          done
+          if [ "$OK" -lt 3 ]; then echo "::error::代理连续测活失败(502/超时)"; tail -30 /tmp/mihomo.log; exit 1; fi
+          echo "代理连续 $OK 次测活 204 OK"
+          # 连续多次 requests(OpenSSL)+代理 打东财 clist 小包，确认不再 502
+          python3 - <<'PY'
+          import requests,time
+          EM='https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&fltt=2&fs=m:0+t:6&fields=f12'
+          P={'http':'http://127.0.0.1:7890','https':'http://127.0.0.1:7890'}
+          ok=0
+          for i in range(8):
+              try:
+                  r=requests.get(EM,proxies=P,timeout=8)
+                  if r.status_code==200 and 'data' in r.text: ok+=1
+                  else: print('  第%d次 HTTP%s %s'%(i+1,r.status_code,r.text[:60]))
+              except Exception as e: print('  第%d次 EXC %s'%(i+1,str(e)[:60]))
+              time.sleep(0.5)
+          print('OpenSSL+代理 clist 小包: %d/8 成功'%ok)
+          if ok < 5: raise SystemExit('代理+OpenSSL 502 未修复，停止全量（避免浪费）')
+          PY
+
+      - name: 【全量试跑】OpenSSL+代理 40并发 5584只（不提交）
+        env:
+          BREADTH_SOURCE: eastmoney
+          BREADTH_WORKERS: '40'
+          EM_HTTP_LIB: requests            # v480：标准 OpenSSL，不用 curl_cffi
+          HTTP_PROXY: http://127.0.0.1:7890
+          HTTPS_PROXY: http://127.0.0.1:7890
+        run: |
+          set -uo pipefail
+          cp breadth/data/_archive_breadth_em_20261114.json /tmp/breadth_try.json
+          echo "全量试跑启动：OpenSSL+代理 40并发，起点 东财底稿 8818日/5584只"
+          T0=$(date +%s)
+          set +e
+          timeout 240 python tools/breadth_run.py --out /tmp/breadth_try.json --incremental
+          RC=$?
+          set -e
+          T1=$(date +%s)
+          echo ">>> 退出码=$RC 总耗时=$((T1-T0))s"
+          python3 - <<'PY'
+          import json
+          try:
+            d=json.load(open('/tmp/breadth_try.json',encoding='utf-8'));m=d.get('meta',{})
+            print('试跑结果: universe=%s 交易日=%s 末日=%s valid=%s stale=%s reason=%s'%(
+              m.get('universe'),len(d.get('dates',[])),(d.get('dates') or [None])[-1],
+              m.get('valid'),m.get('stale'),m.get('stale_reason')))
+          except Exception as e: print('结果读取失败:',e)
+          PY
+          echo "注意：本次不提交，线上腾讯生产数据未被触碰"
+
+      - name: 清理（always）
+        if: always()
+        run: |
+          if [ -f /tmp/mihomo.pid ]; then kill "$(cat /tmp/mihomo.pid)" 2>/dev/null || true; fi
+          pkill -f '/tmp/mihomo' 2>/dev/null || true
+          find /tmp/mihomo-conf -type f -delete 2>/dev/null || true
+          echo "已清理"

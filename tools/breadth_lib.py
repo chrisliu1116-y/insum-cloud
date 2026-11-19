@@ -20,7 +20,15 @@ import threading
 # requests —— 后者的 JA3 指纹会被东财 WAF 识别后直接断连（RemoteDisconnected）。
 # Session 级指定 impersonate="chrome120" 后，该 Session 发出的每一个请求
 # 都带 Chrome 120 的 TLS/JA3/HTTP2 指纹，以及下面三个标准浏览器请求头。
-from curl_cffi import requests
+import os as _os   # v480：提前导入，供下方 EM_HTTP_LIB 切换判断使用
+# v480【OpenSSL切换】EM_HTTP_LIB=requests 时用标准 requests(OpenSSL)，彻底不用 curl_cffi 的 BoringSSL
+# （实测 BoringSSL 指纹被东财 BAD_DECRYPT 拒绝，而标准 requests 在 GHA 直连/代理均曾 200）。
+if _os.environ.get('EM_HTTP_LIB') == 'requests':
+    import requests
+    _USING_OPENSSL = True
+else:
+    from curl_cffi import requests
+    _USING_OPENSSL = False
 
 # v468【clist分片懒切换】主域名 push2 已被风控(全节点502)，改用候选分片列表。
 # 启动零探针：直接用首位发正式请求；仅遇 502/curl56/超时 才顺位切下一个。
@@ -80,7 +88,10 @@ def _proxies_for(mode):
 
 def _new_session(mode):
     """创建独立 Session（chrome120 指纹 + 生产 header + 指定代理模式）。"""
-    s = requests.Session(impersonate="chrome120")
+    if _USING_OPENSSL:
+        s = requests.Session()          # 标准 OpenSSL 指纹
+    else:
+        s = requests.Session(impersonate="chrome120")
     s.headers.update(UA)
     p = _proxies_for(mode)
     if p:

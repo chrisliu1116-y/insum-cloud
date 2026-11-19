@@ -5,6 +5,12 @@ name: 东财全量试跑·OpenSSL+代理32并发（只读·不提交·不覆盖�
 #           ③ 目标3分钟内跑完5584只；④ 代理先测活+502自动重试。
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'proxy=OpenSSL+代理40并发 / direct=OpenSSL+GHA直连30并发'
+        type: choice
+        options: [proxy, direct]
+        default: proxy
 
 permissions:
   contents: read
@@ -43,6 +49,7 @@ jobs:
           curl -fsSL "$URL" | gunzip > /tmp/mihomo && chmod +x /tmp/mihomo
 
       - name: 起代理 + 节点测活（关键：等健康节点，剔除坏节点）
+        if: inputs.mode != 'direct'
         env:
           SUB_URLS: ${{ secrets.SUB_URLS }}
         run: |
@@ -84,14 +91,14 @@ jobs:
       - name: 【全量试跑】OpenSSL+代理 40并发 5584只（不提交）
         env:
           BREADTH_SOURCE: eastmoney
-          BREADTH_WORKERS: '40'
+          BREADTH_WORKERS: ${{ inputs.mode == 'direct' && '30' || '40' }}
           EM_HTTP_LIB: requests            # v480：标准 OpenSSL，不用 curl_cffi
-          HTTP_PROXY: http://127.0.0.1:7890
-          HTTPS_PROXY: http://127.0.0.1:7890
+          HTTP_PROXY: ${{ inputs.mode == 'direct' && '' || 'http://127.0.0.1:7890' }}
+          HTTPS_PROXY: ${{ inputs.mode == 'direct' && '' || 'http://127.0.0.1:7890' }}
         run: |
           set -uo pipefail
           cp breadth/data/_archive_breadth_em_20261114.json /tmp/breadth_try.json
-          echo "全量试跑启动：OpenSSL+代理 40并发，起点 东财底稿 8818日/5584只"
+          echo "全量试跑启动：OpenSSL+${{ inputs.mode }} ${{ inputs.mode == 'direct' && '30' || '40' }}并发，起点 东财底稿 8818日/5584只"
           T0=$(date +%s)
           set +e
           timeout 240 python tools/breadth_run.py --out /tmp/breadth_try.json --incremental

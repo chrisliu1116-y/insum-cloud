@@ -60,7 +60,7 @@ FS_BJ = "m:0+t:81+s:2048"
 # 底层 libcurl handle/TLS 状态非线程安全，会产生 BAD_DECRYPT 串包。
 # 每个线程独立持有自己的 Session，彻底消除并发串包。
 import os as _os
-_pxy = _os.environ.get('HTTPS_PROXY') or _os.environ.get('https_proxy') or _os.environ.get('HTTP_PROXY') or ''
+_pxy = (_os.environ.get('HTTPS_PROXY') or _os.environ.get('https_proxy') or _os.environ.get('HTTP_PROXY') or '').strip()
 
 # v469【协议攻坚】可切换传输模式。BAD_DECRYPT 是 BoringSSL 走 HTTP CONNECT 隧道收大包
 # 的已知冲突；按 用户指定优先级探测：http明文 → socks5h → 直连 → 现状https代理。
@@ -96,6 +96,8 @@ def _new_session(mode):
     p = _proxies_for(mode)
     if p:
         s.proxies = p
+    elif _USING_OPENSSL:
+        s.trust_env = False    # v480：直连模式忽略环境残留代理（GHA runner 可能预设 HTTP_PROXY）
     return s
 
 def _session():

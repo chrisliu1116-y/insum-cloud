@@ -36,10 +36,11 @@ NODES = [
 # ---------- ①节点连通性 ----------
 ok_nodes = []
 for name, ip, port in NODES:
-    api = TdxHq_API(heartbeat=False, auto_retry=False)
+    api = TdxHq_API(heartbeat=True, auto_retry=False)
     t1 = time.time()
     try:
-        with api.connect(ip, port, time_out=3):
+        connected = api.connect(ip, port, time_out=3)
+        if connected:
             cnt = api.get_security_count(0)   # 深市证券数，验证协议可用
             dt = time.time() - t1
             if cnt and cnt > 100:
@@ -47,6 +48,10 @@ for name, ip, port in NODES:
                 tag('①节点OK', name, ip, '延迟%.2fs' % dt, '深市证券数', cnt)
             else:
                 tag('①节点空', name, ip, 'cnt=', cnt)
+        else:
+            tag('①节点FAIL', name, ip, 'connect返回False')
+        try: api.disconnect()
+        except Exception: pass
     except Exception as e:
         tag('①节点FAIL', name, ip, type(e).__name__, str(e)[:50])
 
@@ -68,7 +73,7 @@ try:
             cnt = api.get_security_count(mkt)
             tag('②市场', mkt, label, '证券数', cnt)
             if cnt and cnt > 0:
-                lst = api.get_security_list(mkt, 0)
+                lst = api.get_security_list(mkt, 1000)
                 tag('   样本', [(x.get('code'), x.get('name')) for x in (lst or [])[:3]])
         except Exception as e:
             tag('②市场', mkt, 'EXC', type(e).__name__, str(e)[:60])
@@ -77,7 +82,7 @@ try:
     for code in ['832317','833874']:
         for mkt in [2,0]:
             try:
-                bars = api.get_security_bars(9, mkt, code, 0, 800)  # 9=日K
+                bars = api.get_security_bars(4, mkt, code, 0, 800)  # 4=日K
                 tag('②北交日线 mkt=%d'%mkt, code, '根数', len(bars) if bars else 0,
                     '首末', (bars[0].get('datetime'), bars[-1].get('datetime')) if bars else '-')
             except Exception as e:
@@ -87,7 +92,7 @@ try:
     try:
         earliest = None; total = 0
         for start in range(0, 20000, 800):
-            b = api.get_security_bars(9, 1, '600519', start, 800)
+            b = api.get_security_bars(4, 1, '600519', start, 800)
             if not b: break
             total += len(b)
             earliest = b[0].get('datetime')  # start越大越早
@@ -115,7 +120,7 @@ try:
             f = api.get_finance_info(mkt, code)
             tag('③finance', label, mkt, code, '字段数', len(f) if f else 0,
                 '总股本字段', {k: v for k, v in (f or {}).items() if k in ('gbbq','zgb','ltgb','hd_date','gbbq_date') or 'zgb' in k or '股本' in k})
-            if f: tag('   finance字段', list(f.keys())[:30])
+            if f: tag('   finance全字段', list(f.keys()))
         except Exception as e:
             tag('③finance', label, 'EXC', type(e).__name__, str(e)[:50])
 finally:
@@ -132,7 +137,7 @@ def fetch_one(mkt_code, ip, port):
     a = TdxHq_API(heartbeat=False, auto_retry=False)
     try:
         with a.connect(ip, port, time_out=5):
-            b = a.get_security_bars(9, mkt, code, 0, 100)
+            b = a.get_security_bars(4, mkt, code, 0, 100)
             return len(b) if b else 0
     except Exception:
         return -1

@@ -1,0 +1,22 @@
+name: pytdx纯单一源GHA探测（7709节点/北交所/xdxr/并发·只读）
+
+# 2026-11-20 路线A评估：仅在GHA云端探测pytdx，本机零请求、不改生产数据。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装pytdx
+        run: pip install pytdx
+      - name: pytdx四组探测
+        run: timeout 600 python3 tools/pytdx_probe.py

@@ -2,7 +2,7 @@
 """v502【Groq能力探测 + 三层容灾切换验证·仅GHA】
 测:①Groq各免费模型可用性/速度/是否支持thinking ②模拟智谱报错→自动切Groq。
 """
-import os,json,urllib.request,time,sys
+import os,json,urllib.request,urllib.error,time,sys
 T0=time.time()
 def tag(*a):print('[GROQ]',*a,flush=True)
 K=os.environ.get('GROQ_KEY','')
@@ -16,7 +16,12 @@ def call(model,extra=None,maxtok=80):
     req=urllib.request.Request(URL,data=json.dumps(body).encode(),
       headers={'Authorization':'Bearer '+K,'Content-Type':'application/json'})
     t=time.time()
-    with urllib.request.urlopen(req,timeout=40) as r:d=json.loads(r.read().decode())
+    try:
+        with urllib.request.urlopen(req,timeout=40) as r:d=json.loads(r.read().decode())
+    except urllib.error.HTTPError as he:
+        body=he.read().decode(errors='ignore')[:300]
+        tag('  HTTP错误体:',he.code,body)
+        raise
     dt=time.time()-t
     ch=d['choices'][0]
     return dt,(ch.get('message') or {}).get('content',''),d.get('usage',{}),ch.get('finish_reason'),bool(ch.get('message',{}).get('reasoning'))

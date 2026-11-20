@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+      - name: 遮蔽key
+        run: echo "::add-mask::${{ inputs.cron_key }}"
       - name: ①无鉴权应403
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" -X POST --max-time 15 https://macropulse-edge.mp-7962af18.workers.dev/__newsbeat)

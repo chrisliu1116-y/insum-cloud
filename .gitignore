@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 tools/breadth_cache/
 _backup/
+breadth/data/_sealed_20261121/

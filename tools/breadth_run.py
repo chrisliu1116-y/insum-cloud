@@ -698,6 +698,15 @@ def main():
     # 显式 pop 防止将来改为复用 old.meta 时残留 stale 字段）。
     for k in ("stale", "stale_since", "stale_reason"):
         out["meta"].pop(k, None)
+    # v490【分段标记持久化】拼接底稿(2026-11-21)的 merged/merge_cut/segments 存在
+    # old.meta 里，但 out.meta 是全新 dict。增量跑批若不继承，明天首次跑批就会
+    # 冲掉分段标记 → 前端 breadth 页游标分段显示("东财段/腾讯段")失效、退回按
+    # source 全段显示。这里只继承这 3 个字段；--fresh/无 old 时不继承（新底稿
+    # 本就没有），不影响其它 meta，也不影响非拼接的纯单源运行。
+    if old and isinstance(old.get("meta"), dict):
+        for _segk in ("merged", "merge_cut", "segments"):
+            if _segk in old["meta"]:
+                out["meta"][_segk] = old["meta"][_segk]
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     sz = os.path.getsize(out_path) / 1024

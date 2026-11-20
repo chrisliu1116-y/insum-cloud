@@ -1,0 +1,27 @@
+name: 验证__newsbeat端点(仅GHA·一次性)
+on:
+  workflow_dispatch:
+    inputs:
+      cron_key:
+        description: 'CRON_KEY (临时验证用)'
+        required: true
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: ①无鉴权应403
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST --max-time 15 https://macropulse-edge.mp-7962af18.workers.dev/__newsbeat)
+          echo "无鉴权 HTTP=$code (期望403)"
+      - name: ②鉴权应秒回202
+        run: |
+          t0=$(date +%s%3N)
+          body=$(curl -s -X POST --max-time 20 -w "\n%{http_code}\n%{time_total}" \
+            "https://macropulse-edge.mp-7962af18.workers.dev/__newsbeat?token=${{ inputs.cron_key }}")
+          t1=$(date +%s%3N)
+          echo "响应: $body"
+          echo "端到端耗时 $((t1-t0))ms"

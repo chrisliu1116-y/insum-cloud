@@ -1,0 +1,43 @@
+name: update-indices
+# 多指数 K 线增量补（与 breadth 主跑批彻底解耦）
+# 每天收盘后跑一次：每指数只 1 个 lmt=8 轻量请求，幂等跳过已有末日，
+# 只更新 sse.json 的 indices 字段，绝不碰 breadth.json / 主跑批。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '45 08 * * *'   # 北京时间 16:45（收盘+主跑批后）
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-indices
+  cancel-in-progress: false
+
+jobs:
+  upd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 启动机场代理(东财指数请求走代理出口)
+        env:
+          SUB_URLS: ${{ secrets.SUB_URLS }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash tools/start_proxy.sh
+      - name: 增量补指数(每指数1个小请求)
+        run: python3 tools/update_indices.py
+      - name: 提交(仅数据变新时)
+        run: |
+          git config user.name "idx-bot"
+          git config user.email "{{EMAIL_btwqdyds}}"
+          git add breadth/data/sse.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: 多指数K线增量 $(date -u +%Y-%m-%d)"
+            git push
+          else
+            echo "指数数据无变化"
+          fi

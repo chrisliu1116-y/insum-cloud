@@ -141,18 +141,22 @@ def probe_index_starts():
 
 
 def main():
-    print('[Phase1] start', bjnow(), flush=True)
-    report = {'generated': bjnow(), 'note': 'GHA 只读探测，不改生产'}
+    no_index = '--no-index' in sys.argv   # 本机跑时跳过东财部分（守红线），只探 Polymarket+CF
+    print('[Phase1] start', bjnow(), 'no_index=', no_index, flush=True)
+    report = {'generated': bjnow(), 'note': '只读探测，不改生产'}
     print('[Phase1] ① Gamma API...', flush=True)
     report['gamma'] = probe_gamma()
     print('[Phase1] gamma stable', report['gamma']['stable'], '/3', flush=True)
     print('[Phase1] ② CF 新闻池...', flush=True)
     report['cf_news'] = probe_cf_news()
     print('[Phase1] cf ok', report['cf_news'].get('ok'), flush=True)
-    print('[Phase1] ③ 指数起点...', flush=True)
-    report['indices'] = probe_index_starts()
-    for k, v in report['indices'].items():
-        print('  ', k, v.get('first'), v.get('bars'), v.get('ok'), flush=True)
+    if no_index:
+        report['indices'] = {'_skipped': '本机禁东财请求，指数起点由 GHA 探测'}
+    else:
+        print('[Phase1] ③ 指数起点...', flush=True)
+        report['indices'] = probe_index_starts()
+        for k, v in report['indices'].items():
+            print('  ', k, v.get('first'), v.get('bars'), v.get('ok'), flush=True)
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     print('[Phase1] wrote', OUT, flush=True)

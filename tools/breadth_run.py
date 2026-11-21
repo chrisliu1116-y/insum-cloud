@@ -723,6 +723,17 @@ def main():
 EM_SPOT = "https://push2.eastmoney.com/api/qt/stock/get"
 SSE_SECID = "1.000001"          # 上证指数（沪市 1.）；写成 000001 会被判成深市平安银行
 
+# v491【多指数对比】除上证(顶层主字段,兼容旧逻辑/灾备链)外,额外 5 个指数写入
+# sse.json 的 indices 字段,各存自己的真实起点(前端严格按 dates[0] 切割指标)。
+# secid 与 assets/js/universe.js 对齐;指数 fqt 无效(不复权),不影响。
+EXTRA_INDICES = [
+    ("SZ",   "深证成指", "0.399001"),
+    ("SZ50", "上证50",   "1.000016"),
+    ("HS300","沪深300",  "1.000300"),
+    ("CYB",  "创业板指", "0.399006"),
+    ("KC50", "科创50",   "1.000688"),
+]
+
 # ---- 腾讯 fqkline 备用源（2026-11-12 实测）----
 # 仅当东财 push2his 返回空 / 异常时才回退；主路径成功时行为一字不改。
 # 实测：param=sh000001,day,,,<count>,qfq；count>=2400 起 data 返回空（[] 坑），
@@ -740,15 +751,18 @@ SSE_JSON = os.path.join(OUT_DIR, "sse.json")   # 已提交的全量历史底稿�
 _SSE_KLINE_SOURCE = "eastmoney"
 
 
-def fetch_index_bars(lmt=10000, beg="19900101"):
-    """上证指数全量日K（显式 secid = 1.000001）。
+def fetch_index_bars(lmt=10000, beg="19900101", secid=None):
+    """指数全量日K（显式 secid；默认 SSE_SECID=上证 1.000001）。
 
     ⚠️ 不能用 B.fetch_kline("000001")：`secid_of` 把 0 开头判成深市 → **0.000001 = 平安银行**，
     抓回来的是个股（末收盘 ~11.71、起点 1991-04-03、8515 根），而指数是 3680 量级、
     起点 1990-12-19。这个错会让"上证 K 线"整条画错却看起来有数据。
+
+    v491：新增 secid 参数供多指数对比；不传时行为与原来完全一致（上证）。
     """
+    _secid = secid or SSE_SECID
     params = {
-        "secid": SSE_SECID, "klt": 101, "fqt": 1, "lmt": lmt, "end": "20500101",
+        "secid": _secid, "klt": 101, "fqt": 1, "lmt": lmt, "end": "20500101",
         "beg": beg, "fields1": "f1,f2,f3,f4,f5,f6",
         "fields2": "f51,f52,f53,f54,f55,f56,f57",
     }
@@ -775,6 +789,11 @@ def fetch_index_bars(lmt=10000, beg="19900101"):
         return out
 
     # 东财返回空 / 解析全失败 / 请求异常 → 才回退腾讯。主路径成功绝不走到这里。
+    # v491：腾讯兜底写死 sh000001(上证)，非上证 secid 绝不能回退，否则会把上证
+    # 数据错标成深成/科创 → 多指数直接返回空，由 write_sse 失败隔离跳过。
+    if _secid != SSE_SECID:
+        _SSE_KLINE_SOURCE = "eastmoney"
+        return []
     bars = fetch_index_bars_fallback()
     if bars:
         _SSE_KLINE_SOURCE = "tencent-fqkline"
@@ -1015,9 +1034,37 @@ def write_sse(sse_path, breadth_path=None):
         },
         "dates": dates, "o": o, "h": h, "l": l, "c": c,
     }
+    # v491【多指数对比】额外 5 个指数写入 indices 字段，各存自己的真实起点。
+    # 失败隔离：单个指数抓取失败只 log 并跳过，绝不影响上证主字段/breadth 主流程。
+    # 起点不补零、不伪造——东财返回多少根就存多少根，前端按 dates[0] 切割指标。
+    extra = {}
+    for key, name, sec in EXTRA_INDICES:
+        try:
+            bars2 = fetch_index_bars(lmt=10000, beg="19900101", secid=sec)
+            if not bars2:
+                log(f"[multi-idx] {key} {name} 抓取为空，跳过（不影响上证）")
+                continue
+            d2 = [b["d"][:10] for b in bars2]
+            v2 = float(bars2[-1]["c"])
+            if not (50 < v2 < 20000):
+                log(f"[multi-idx] {key} {name} 末收 {v2} 不在指数量级，疑似抓错，跳过")
+                continue
+            extra[key] = {
+                "name": name, "secid": sec,
+                "from": d2[0], "to": d2[-1], "days": len(d2),
+                "dates": d2,
+                "o": [round(b["o"], 2) for b in bars2],
+                "h": [round(b["h"], 2) for b in bars2],
+                "l": [round(b["l"], 2) for b in bars2],
+                "c": [round(b["c"], 2) for b in bars2],
+            }
+            log(f"[multi-idx] {key} {name} {d2[0]} → {d2[-1]} ({len(d2)} 根)")
+        except Exception as e:
+            log(f"[multi-idx] {key} {name} 失败({type(e).__name__}:{str(e)[:80]})，跳过")
+    payload["indices"] = extra
     with open(sse_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
-    log(f"已写出 {sse_path}  上证 {dates[0]} → {last}  ({len(dates)} 根)")
+    log(f"已写出 {sse_path}  上证 {dates[0]} → {last}  ({len(dates)} 根, 额外指数 {len(extra)}/{len(EXTRA_INDICES)})")
 
 
 if __name__ == "__main__":

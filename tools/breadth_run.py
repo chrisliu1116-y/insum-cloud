@@ -867,8 +867,8 @@ def fetch_index_bars_fallback(count=TENCENT_MAX_COUNT, timeout=TENCENT_TIMEOUT,
     return _merge_tencent_history(tx, sse_path)
 
 
-def fetch_spot_bar_000001():
-    """收盘后用 push2 实时快照拼出「当日」上证 bar。
+def fetch_spot_bar_000001(secid="1.000001"):
+    """收盘后用 push2 实时快照拼出「当日」指数 bar（默认上证，secid 可指定其他指数）。
 
     为什么需要它：push2his 的日 K 常常要等几分钟到几十分钟才落当天那根（有时
     干脆当天不落，只能等次日），而 push2 快照在收盘那一刻就把 开/高/低/收/量/额
@@ -885,7 +885,7 @@ def fetch_spot_bar_000001():
     b_last（不是 sp["d"]）。这里只做基础校验，并保留 _ts/_src 供 write_sse 审计。
     """
     d = B._get(EM_SPOT, {
-        "secid": "1.000001", "fltt": 2, "invt": 2,
+        "secid": secid, "fltt": 2, "invt": 2,
         "fields": "f43,f44,f45,f46,f47,f48,f57,f58,f60,f86",
     }, retries=3)
     x = (d or {}).get("data") or {}
@@ -1035,48 +1035,52 @@ def write_sse(sse_path, breadth_path=None):
         "dates": dates, "o": o, "h": h, "l": l, "c": c,
     }
     # v526【去耦合·铁律】绝不为了多指数重抓 5 个指数：① 频繁跑批会招腾讯/东财风控；
-    # ② 用户 2026-11-21 明确「GHA已有完整文件就裁切，不要重跑」。
-    # 策略：旧 sse.json 里已有 indices → 原样保留（breadth 跑批只更新上证主字段）；
-    # 只有旧文件完全没有 indices（首次迁移）才抓一次，之后交给独立脚本
-    # tools/update_indices.py 小步增量补，不再随 breadth 主跑批触发。
+    # v526【跟上证同款逻辑·用户 2026-11-21 明确】
+    # 用户口径：「之前上证指数是怎么弄的，现在其他指数就怎么弄」。
+    # 上证现成逻辑 = write_sse 检测到 breadth 更新到 b_last → 用 push2 收盘快照
+    # 补/覆盖当日那根 K 线（fetch_spot_bar_000001 + spot_usable），历史不动。
+    # 其他指数照抄：读旧 sse.json.indices（完整历史，零重抓），对每个指数用
+    # 同一个快照函数（仅 secid 不同）补当日一根，日期对齐 b_last。
+    # 绝不重跑历史抓取（防风控）；腾讯跑批配置一律不动（直连，不用代理）。
     try:
         with open(sse_path, encoding="utf-8") as f:
             _old = json.load(f)
         old_idx = _old.get("indices") or {}
     except Exception:
         old_idx = {}
-    if old_idx:
-        payload["indices"] = old_idx                 # 现成数据直接用，零请求
-        log(f"[multi-idx] 复用已有 indices {len(old_idx)} 个（零请求，不重抓）")
-    else:
-        extra = {}
-        for key, name, sec in EXTRA_INDICES:
-            try:
-                bars2 = fetch_index_bars(lmt=10000, beg="19900101", secid=sec)
-                if not bars2:
-                    log(f"[multi-idx] {key} {name} 抓取为空，跳过")
-                    continue
-                d2 = [b["d"][:10] for b in bars2]
-                v2 = float(bars2[-1]["c"])
-                if not (50 < v2 < 20000):
-                    log(f"[multi-idx] {key} {name} 末收 {v2} 疑似抓错，跳过")
-                    continue
-                extra[key] = {
-                    "name": name, "secid": sec,
-                    "from": d2[0], "to": d2[-1], "days": len(d2),
-                    "dates": d2,
-                    "o": [round(b["o"], 2) for b in bars2],
-                    "h": [round(b["h"], 2) for b in bars2],
-                    "l": [round(b["l"], 2) for b in bars2],
-                    "c": [round(b["c"], 2) for b in bars2],
-                }
-                log(f"[multi-idx] 首次生成 {key} {name} {d2[0]} → {d2[-1]} ({len(d2)} 根)")
-            except Exception as e:
-                log(f"[multi-idx] {key} {name} 失败({type(e).__name__}:{str(e)[:80]})，跳过")
-        payload["indices"] = extra
+    n_updated = 0
+    for key, obj in old_idx.items():
+        sec = obj.get("secid")
+        if not sec or not obj.get("dates"):
+            continue
+        try:
+            sp2 = fetch_spot_bar_000001(secid=sec)   # 跟上证同一个快照函数，只是 secid 不同
+            ok2, why2 = spot_usable(sp2, b_last)
+            if not ok2:
+                log(f"[multi-idx] {key} 快照不可用({why2})，保留旧数据")
+                continue
+            bar2 = {k: sp2[k] for k in ("o", "c", "h", "l")}
+            if not (50 < bar2["c"] < 20000):
+                log(f"[multi-idx] {key} 快照收盘 {bar2['c']} 疑似抓错，跳过")
+                continue
+            if obj["dates"][-1] == b_last:
+                # 末日已存在 → 用快照覆盖当日那根（跟上证 bars[-1]=bar 同款）
+                obj["o"][-1] = round(bar2["o"], 2); obj["h"][-1] = round(bar2["h"], 2)
+                obj["l"][-1] = round(bar2["l"], 2); obj["c"][-1] = round(bar2["c"], 2)
+            else:
+                # 末日不存在 → 补一根（跟上证 bars.append(bar) 同款）
+                obj["dates"].append(b_last)
+                obj["o"].append(round(bar2["o"], 2)); obj["h"].append(round(bar2["h"], 2))
+                obj["l"].append(round(bar2["l"], 2)); obj["c"].append(round(bar2["c"], 2))
+            obj["to"] = b_last; obj["days"] = len(obj["dates"])
+            n_updated += 1
+            log(f"[multi-idx] {key} 快照补当日 {b_last} 收 {bar2['c']}（跟上证同款）")
+        except Exception as e:
+            log(f"[multi-idx] {key} 快照失败({type(e).__name__}:{str(e)[:80]})，保留旧数据")
+    payload["indices"] = old_idx
     with open(sse_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
-    log(f"已写出 {sse_path}  上证 {dates[0]} → {last}  ({len(dates)} 根, 额外指数 {len(extra)}/{len(EXTRA_INDICES)})")
+    log(f"已写出 {sse_path}  上证 {dates[0]} → {last}  ({len(dates)} 根, 额外指数快照更新 {n_updated}/{len(old_idx)})")
 
 
 if __name__ == "__main__":

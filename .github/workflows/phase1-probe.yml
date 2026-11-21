@@ -21,6 +21,18 @@ jobs:
           name: phase1-probe
           path: tools/phase1_probe.json
           retention-days: 30
+      - name: 提交报告到仓库(便于本地直接读取)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          git config user.name "probe-bot"
+          git config user.email "probe-bot@users.noreply.github.com"
+          git add tools/phase1_probe.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: Phase1探测报告 $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          else
+            echo "报告无变化，跳过提交"
+          fi
       - name: 摘要打印
         run: |
           python3 - <<'PY'

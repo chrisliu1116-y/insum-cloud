@@ -85,13 +85,28 @@ _BLACK = [
 _BLACK_RE = [re.compile(x, re.I) for x in _BLACK]
 
 
+# 已有卡的英文别名映射（中英双语去重）：Polymarket 盘口多为英文标题，
+# 而卡 title/core_subject 是中文，必须先映射才能判重。
+CARD_EN_ALIASES = {
+    'fed':      ['fed', 'fomc', 'federal reserve', 'powell', 'interest rate', 'rate decision'],
+    'iran':     ['iran', 'israel', 'hormuz', 'iranian', 'israeli', 'ceasefire'],
+    'ukraine':  ['ukraine', 'russia', 'putin', 'zelensky', 'ukrainian', 'russian'],
+    'apec':     ['apec', 'asia pacific', '领导人会议'],
+    'huang':    ['huang', 'jensen', 'nvidia', 'rejoins nvidia'],
+}
+
+
 def load_existing_cards():
     """复用已打通的双池去重：events.js(人工卡) + events_daily.json(动态卡)。
-    返回 [{id,title,keys}]。影子模式只用来标注「已有卡」，绝不写回。"""
+    返回 [{id,title,keys}]。keys 含英文别名，确保英文盘口能判重。只标注不写回。"""
     cards = []
     try:
         from event_incubator import load_h5_event_themes
-        cards += load_h5_event_themes()            # events.js 5张(含 huang)
+        h5 = load_h5_event_themes()                # events.js 5张(含 huang)
+        for c in h5:
+            c = dict(c)
+            c['keys'] = list(c.get('keys') or []) + CARD_EN_ALIASES.get(c.get('id'), [])
+            cards.append(c)
     except Exception as e:
         print('[radar] 读 events.js 卡失败:', type(e).__name__, flush=True)
     # 动态卡池 events_daily.json（title / scope.core_subject / facts 主题）
@@ -102,8 +117,9 @@ def load_existing_cards():
                 d = json.load(f)
             for cid, c in (d.get('cards') or {}).items():
                 sc = c.get('scope') or {}
-                cards.append({'id': cid, 'title': c.get('title') or '',
-                              'keys': [sc.get('core_subject', '')] if isinstance(sc, dict) else []})
+                keys = ([sc.get('core_subject', '')] if isinstance(sc, dict) else [])
+                keys = [k for k in keys if k] + CARD_EN_ALIASES.get(cid, [])
+                cards.append({'id': cid, 'title': c.get('title') or '', 'keys': keys})
             break
         except Exception:
             continue

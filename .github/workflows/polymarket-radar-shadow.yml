@@ -1,0 +1,58 @@
+name: polymarket-radar-shadow
+# Phase 2 影子模式：Polymarket 主动雷达。只读+只归档，不写生产卡/不推前端。
+# 判定稳定后再切正式审批流。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 07 * * *'   # 北京时间 15:30（收盘后）
+
+permissions:
+  contents: write
+
+concurrency:
+  group: polymarket-radar-shadow
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
+      # 红线：不传 GEMINI_KEY，且脚本只用 _zhipu，禁用 Gemini
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 影子雷达
+        run: python3 tools/polymarket_radar.py --out tools/polymarket_radar_shadow.json
+      - name: 上传影子报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: polymarket-radar-shadow
+          path: tools/polymarket_radar_shadow.json
+          retention-days: 14
+      - name: 提交影子报告(便于观察误报)
+        run: |
+          git config user.name "radar-shadow-bot"
+          git config user.email "radar-shadow@users.noreply.github.com"
+          git add tools/polymarket_radar_shadow.json
+          if ! git diff --cached --quiet; then
+            git commit -m "shadow: Polymarket雷达影子报告 $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          else
+            echo "报告无变化"
+          fi
+      - name: 摘要
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('tools/polymarket_radar_shadow.json',encoding='utf-8'))
+          print('mode',d['mode'],'threshold',d['vol_threshold'])
+          print('stats',d.get('stats'))
+          print('cf',d.get('cf'))
+          if d.get('error'): print('ERROR',d['error'])
+          for c in d.get('candidates',[])[:10]:
+            print(' ',c['category'],c['vol24h'],c['title'][:60],'CF',c['cf']['reason'],'LLM',c.get('llm',{}).get('keep'))
+          PY

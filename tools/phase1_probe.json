@@ -309,7 +309,12 @@
   "cf_news": {
     "url": "https://macro-pulse.app.workbuddy.host/api/news",
     "ok": false,
-    "err": "HTTPError:HTTP Error 403: Forbidden"
+    "err": "HTTPError:HTTP Error 403: Forbidden",
+    "CORRECTION": "2026-11-21 14:5x 用户指出探测端点错误：真实CF池是 macropulse-api.pages.dev/__news(build_news_map.py在用)，不是 /api/news。实测 __news HTTP200/2000条/最新ts当日，链路正常。此前403/404结论作废。",
+    "diag": {
+      "superseded": {},
+      "note": "作废：探错端点"
+    }
   },
   "indices": {
     "SH": {

@@ -29,6 +29,49 @@ MAX_ACTIVE = 6
 DORMANT_DAYS = 7
 ARCHIVE_CLEAN_DAYS = 14
 
+# 事件追踪页(events.js)与孵化池(events_daily.json)是两套卡池。孵化去重过去只读
+# events_daily.json，导致 events.js 里人工维护的卡(如 huang)对孵化器不可见 → 可能
+# 重复建卡。这里从 events.js 正则提取每张卡的 id/title/newsKeys，合并进去重主题。
+# 候选路径：本机主站 → GHA 仓库内的镜像副本（随仓库提交，云端可读）
+_H5_EVENTS_CANDIDATES = [
+    r'E:/WorkBuddy工作区/2026-11-03-23-29-44/assets/js/events.js',
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                 'data', 'events_h5_mirror.js'),   # insum-cloud/data/events_h5_mirror.js
+]
+
+
+def _find_h5_events_js():
+    for p in _H5_EVENTS_CANDIDATES:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def load_h5_event_themes(path=None):
+    """从 events.js 提取 [{id,title,newsKeys}]，失败返回 []（不影响主流程）。"""
+    out = []
+    path = path or _find_h5_events_js()
+    if not path:
+        return out
+    try:
+        with open(path, encoding='utf-8') as f:
+            s = f.read()
+        # 每张顶层卡以「6 空格 + id: 'xxx'」开头；seedNews 里的 id 是
+        # 「8 空格 + { id: 'xxx-seed-N'」缩进不同，不能混进来当主题。
+        starts = [m.start() for m in re.finditer(r"(?m)^      id:\s*'[^']+'", s)]
+        for i, st in enumerate(starts):
+            seg = s[st:starts[i + 1] if i + 1 < len(starts) else len(s)]
+            mid = re.search(r"\bid:\s*'([^']+)'", seg)
+            mt = re.search(r"\btitle:\s*'([^']*)'", seg)
+            if not mid:
+                continue
+            keys = re.search(r"\bnewsKeys:\s*\[([^\]]*)\]", seg)
+            kws = re.findall(r"'([^']+)'", keys.group(1)) if keys else []
+            out.append({'id': mid.group(1), 'title': (mt.group(1) if mt else ''), 'keys': kws})
+    except Exception:
+        pass
+    return out
+
 # v2【铁律1：原因vs结果白名单隔离】纯行情波动/单点数据 → 禁止独立建卡。
 # 只有「有后续阶段演变的持续性事件」才配建卡；价格结果是事件的下游，不是事件本身。
 _NEG_MARKET = re.compile(
@@ -324,6 +367,14 @@ def main():
     ilog = events.setdefault('incubator_log', [])
     existing_themes = [c.get('title', '') or c.get('scope', {}).get('core_subject', '')
                        for c in events.get('cards', {}).values()]
+    # v2【打通双池去重】把 events.js 人工卡也纳入，避免对 huang 这类只存在于
+    # 事件追踪页的卡重复建卡。title + newsKeys 都作为主题描述喂给 LLM。
+    for _h in load_h5_event_themes():
+        if _h.get('title'):
+            existing_themes.append(_h['title'])
+        if _h.get('keys'):
+            existing_themes.append(' '.join(_h['keys']))
+    existing_themes = [x for x in existing_themes if x]   # 去掉空串，防止去重列表失效
 
     # 按主题聚类：只有同主题≥min_high条才进建卡判断（防零散新闻拼凑误建卡）
     groups = cluster_candidates(candidates)

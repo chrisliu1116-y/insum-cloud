@@ -1,0 +1,368 @@
+{
+  "generated": "2026-11-21 14:26:50",
+  "note": "只读探测，不改生产",
+  "gamma": {
+    "url": "https://gamma-api.polymarket.com/events?closed=false&order=volume24hr&ascending=false&limit=30&select=id,title,slug,volume24hr,volume,liquidity,endDate,markets,closed",
+    "runs": [
+      {
+        "ok": true,
+        "http": 200,
+        "ms": 975,
+        "n": 30
+      },
+      {
+        "ok": true,
+        "http": 200,
+        "ms": 48,
+        "n": 30
+      },
+      {
+        "ok": true,
+        "http": 200,
+        "ms": 45,
+        "n": 30
+      }
+    ],
+    "stable": 3,
+    "fields": [
+      "active",
+      "archived",
+      "automaticallyActive",
+      "closed",
+      "commentCount",
+      "competitive",
+      "createdAt",
+      "creationDate",
+      "cumulativeMarkets",
+      "cyom",
+      "deploying",
+      "deployingTimestamp",
+      "description",
+      "enableNegRisk",
+      "enableOrderBook",
+      "endDate",
+      "estimateValue",
+      "eventMetadata",
+      "featured",
+      "featuredOrder",
+      "gmpChartMode",
+      "icon",
+      "id",
+      "image",
+      "liquidity",
+      "liquidityClob",
+      "markets",
+      "negRisk",
+      "negRiskAugmented",
+      "negRiskMarketID",
+      "new",
+      "openInterest",
+      "pendingDeployment",
+      "resolutionSource",
+      "restricted",
+      "series",
+      "seriesSlug",
+      "showAllOutcomes",
+      "showMarketImages",
+      "slug",
+      "sortBy",
+      "startDate",
+      "tags",
+      "ticker",
+      "title",
+      "updatedAt",
+      "version",
+      "volume",
+      "volume1mo",
+      "volume1wk",
+      "volume1yr",
+      "volume24hr"
+    ],
+    "top30": [
+      {
+        "title": "Fed Decision in December?",
+        "slug": "fed-decision-in-december-20260729232808632",
+        "vol24h": 4173593,
+        "endDate": "2026-12-10T04:59:00Z",
+        "n_markets": 5
+      },
+      {
+        "title": "Wizards vs. Bulls",
+        "slug": "nba-was-chi-2026-11-20",
+        "vol24h": 2501030,
+        "endDate": "2026-11-21T01:00:00Z",
+        "n_markets": 545
+      },
+      {
+        "title": "What price will Bitcoin hit in 2026?",
+        "slug": "what-price-will-bitcoin-hit-before-2027",
+        "vol24h": 2050079,
+        "endDate": "2027-01-01T05:00:00Z",
+        "n_markets": 47
+      },
+      {
+        "title": "Pelicans vs. Thunder",
+        "slug": "nba-nop-okc-2026-11-20",
+        "vol24h": 1825490,
+        "endDate": "2026-11-21T01:00:00Z",
+        "n_markets": 503
+      },
+      {
+        "title": "Israel x Iran ceasefire continues through...?",
+        "slug": "israel-x-iran-ceasefire-continues-throughptptpt-20260716224448963",
+        "vol24h": 1504490,
+        "endDate": "2026-12-31T20:29:00Z",
+        "n_markets": 46
+      },
+      {
+        "title": "What price will Bitcoin hit in November?",
+        "slug": "what-price-will-bitcoin-hit-in-november-2026",
+        "vol24h": 1019700,
+        "endDate": "2026-12-01T05:00:00Z",
+        "n_markets": 45
+      },
+      {
+        "title": "Democratic Presidential Nominee 2028",
+        "slug": "democratic-presidential-nominee-2028",
+        "vol24h": 998661,
+        "endDate": "2028-11-08T04:59:00Z",
+        "n_markets": 128
+      },
+      {
+        "title": "Next French Presidential Election",
+        "slug": "next-french-presidential-election",
+        "vol24h": 922684,
+        "endDate": "2027-04-19T03:59:00Z",
+        "n_markets": 128
+      },
+      {
+        "title": "What price will Bitcoin hit November 16-22?",
+        "slug": "what-price-will-bitcoin-hit-november-16-22-2026",
+        "vol24h": 711015,
+        "endDate": "2026-11-23T05:00:00Z",
+        "n_markets": 21
+      },
+      {
+        "title": "Republican Presidential Nominee 2028",
+        "slug": "republican-presidential-nominee-2028",
+        "vol24h": 560217,
+        "endDate": "2028-11-08T04:59:00Z",
+        "n_markets": 128
+      },
+      {
+        "title": "Clarity Act (H.R.3633) signed into law in 2026?",
+        "slug": "clarity-act-signed-into-law-in-2026",
+        "vol24h": 496585,
+        "endDate": "2027-01-01T05:00:00Z",
+        "n_markets": 1
+      },
+      {
+        "title": "Bitcoin above ___ on November 21?",
+        "slug": "bitcoin-above-on-november-21-2026",
+        "vol24h": 496250,
+        "endDate": "2026-11-21T17:00:00Z",
+        "n_markets": 11
+      },
+      {
+        "title": "Will China invade Taiwan by end of 2026?",
+        "slug": "will-china-invade-taiwan-before-2027",
+        "vol24h": 485122,
+        "endDate": "2027-01-01T04:59:00Z",
+        "n_markets": 1
+      },
+      {
+        "title": "Jensen Huang rejoins NVIDIA by...?",
+        "slug": "jensen-huang-rejoins-nvidia-byptptpt",
+        "vol24h": 451207,
+        "endDate": "2028-01-01T04:59:00Z",
+        "n_markets": 4
+      },
+      {
+        "title": "Presidential Election Winner 2028",
+        "slug": "presidential-election-winner-2028",
+        "vol24h": 391301,
+        "endDate": "2028-11-08T04:59:00Z",
+        "n_markets": 128
+      },
+      {
+        "title": "Will Anthropic’s valuation hit __ by December 31?",
+        "slug": "will-anthropics-valuation-hit-by-december-31",
+        "vol24h": 386639,
+        "endDate": "2027-01-05T04:59:00Z",
+        "n_markets": 17
+      },
+      {
+        "title": "What price will Ethereum hit in 2026?",
+        "slug": "what-price-will-ethereum-hit-before-2027",
+        "vol24h": 346016,
+        "endDate": "2027-01-01T05:00:00Z",
+        "n_markets": 30
+      },
+      {
+        "title": "PGL Major Singapore 2026: Winner",
+        "slug": "pgl-major-singapore-2026-winner-1793811600000",
+        "vol24h": 317945,
+        "endDate": "2026-12-15T04:59:00Z",
+        "n_markets": 38
+      },
+      {
+        "title": "UEFA Champions League: 2027 Champion",
+        "slug": "uefa-champions-league-2027-champion-20260701202025549",
+        "vol24h": 306397,
+        "endDate": "2027-06-20T03:59:00Z",
+        "n_markets": 42
+      },
+      {
+        "title": "Next CEO of NVIDIA?",
+        "slug": "next-ceo-of-nvidia",
+        "vol24h": 299342,
+        "endDate": "2029-01-01T04:59:00Z",
+        "n_markets": 107
+      },
+      {
+        "title": "Will the US confirm that aliens exist by...?",
+        "slug": "will-the-us-confirm-that-aliens-exist-before-2027",
+        "vol24h": 275820,
+        "endDate": "2027-01-01T04:59:00Z",
+        "n_markets": 7
+      },
+      {
+        "title": "Elon Musk # tweets November 17 - November 24, 2026?",
+        "slug": "elon-musk-of-tweets-november-17-november-24-2026",
+        "vol24h": 270083,
+        "endDate": "2026-11-24T17:00:00Z",
+        "n_markets": 30
+      },
+      {
+        "title": "What price will Ethereum hit November 16-22?",
+        "slug": "what-price-will-ethereum-hit-november-16-22-2026",
+        "vol24h": 257962,
+        "endDate": "2026-11-23T05:00:00Z",
+        "n_markets": 19
+      },
+      {
+        "title": "Prime Minister of Israel after the next election?",
+        "slug": "who-will-be-the-next-prime-minister-of-israel-after-the-next-election",
+        "vol24h": 241534,
+        "endDate": "2026-10-28T03:59:00Z",
+        "n_markets": 28
+      },
+      {
+        "title": "Manchester City FC vs. Fulham FC - More Markets",
+        "slug": "epl-mac-ful-2026-11-21-more-markets",
+        "vol24h": 214551,
+        "endDate": "2026-11-21T12:30:00Z",
+        "n_markets": 55
+      },
+      {
+        "title": "What price will Ethereum hit in November?",
+        "slug": "what-price-will-ethereum-hit-in-november-2026",
+        "vol24h": 211199,
+        "endDate": "2026-12-01T05:00:00Z",
+        "n_markets": 42
+      },
+      {
+        "title": "AI bubble burst by...?",
+        "slug": "ai-bubble-burst-by",
+        "vol24h": 209897,
+        "endDate": "2027-07-01T03:59:00Z",
+        "n_markets": 4
+      },
+      {
+        "title": "Rayo Vallecano de Madrid vs. Valencia CF",
+        "slug": "lal-ray-val-2026-11-21",
+        "vol24h": 208297,
+        "endDate": "2026-11-21T15:15:00Z",
+        "n_markets": 3
+      },
+      {
+        "title": "Bitcoin above ___ on November 22?",
+        "slug": "bitcoin-above-on-november-22-2026",
+        "vol24h": 207304,
+        "endDate": "2026-11-22T17:00:00Z",
+        "n_markets": 11
+      },
+      {
+        "title": "Taipei Mayor Election Winner",
+        "slug": "taipei-mayor-election-winner-20260813125857100",
+        "vol24h": 198563,
+        "endDate": "2026-11-29T04:59:00Z",
+        "n_markets": 30
+      }
+    ],
+    "vol_stats": {
+      "min": 198563,
+      "p25": 253855,
+      "median": 388970,
+      "p75": 941678,
+      "max": 4173593
+    },
+    "threshold_buckets": {
+      "10000": 30,
+      "50000": 30,
+      "100000": 30,
+      "500000": 10,
+      "1000000": 6,
+      "5000000": 0
+    }
+  },
+  "cf_news": {
+    "url": "https://macro-pulse.app.workbuddy.host/api/news",
+    "ok": false,
+    "err": "HTTPError:HTTP Error 403: Forbidden"
+  },
+  "indices": {
+    "SH": {
+      "name": "上证指数",
+      "secid": "1.000001",
+      "ok": true,
+      "ms": 2099,
+      "bars": 8768,
+      "first": "1990-12-19",
+      "last": "2026-11-20",
+      "last_close": "3533.79"
+    },
+    "SZ": {
+      "name": "深证成指",
+      "secid": "0.399001",
+      "ok": true,
+      "ms": 2412,
+      "bars": 8721,
+      "first": "1991-04-03",
+      "last": "2026-11-20",
+      "last_close": "10256.39"
+    },
+    "SZ50": {
+      "name": "上证50",
+      "secid": "1.000016",
+      "ok": false,
+      "err": "RemoteDisconnected:Remote end closed connection without response"
+    },
+    "HS300": {
+      "name": "沪深300",
+      "secid": "1.000300",
+      "ok": false,
+      "err": "RemoteDisconnected:Remote end closed connection without response"
+    },
+    "CYB": {
+      "name": "创业板指",
+      "secid": "0.399006",
+      "ok": true,
+      "ms": 1654,
+      "bars": 4000,
+      "first": "2010-06-01",
+      "last": "2026-11-20",
+      "last_close": "2212.13"
+    },
+    "KC50": {
+      "name": "科创50",
+      "secid": "1.000688",
+      "ok": true,
+      "ms": 1096,
+      "bars": 1669,
+      "first": "2019-12-31",
+      "last": "2026-11-20",
+      "last_close": "1231.09"
+    }
+  }
+}

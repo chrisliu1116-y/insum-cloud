@@ -1,6 +1,8 @@
 name: polymarket-radar-shadow
-# Phase 2 影子模式：Polymarket 主动雷达。只读+只归档，不写生产卡/不推前端。
-# 判定稳定后再切正式审批流。
+# Phase 3 正式：Polymarket 雷达 → 前端审批队列。
+# 链路：radar筛净新增 → 写auto_骨架卡(不调Gemini)进events_daily.json → 前端铃铛待审
+#      → 用户点「加入」POST回执到CF → 下次跑批读回执,只对已确认的调Gemini补全三段式。
+# 红线：未确认前零 Gemini 消耗。
 on:
   workflow_dispatch:
   schedule:
@@ -43,6 +45,34 @@ jobs:
             git push
           else
             echo "报告无变化"
+          fi
+      - name: 检出事件卡仓库(写审批队列)
+        uses: actions/checkout@v4
+        with:
+          repository: chrisliu1116-y/macropulse-news
+          token: ${{ secrets.GH_PAT || github.token }}
+          path: news-repo
+          fetch-depth: 1
+      - name: 发布到前端审批队列(骨架入队+确认后Gemini补全)
+        env:
+          ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+        run: |
+          cp tools/polymarket_radar_shadow.json tools/radar_input.json
+          python3 tools/radar_publish.py \
+            --radar tools/radar_input.json \
+            --events news-repo/data/events_daily.json
+      - name: 提交事件卡(骨架/确认补全/归档)
+        working-directory: news-repo
+        run: |
+          git config user.name "radar-publish-bot"
+          git config user.email "{{EMAIL_wnimbfoh}}"
+          git add data/events_daily.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: Polyradar审批队列 $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          else
+            echo "事件卡无变化"
           fi
       - name: 摘要
         run: |

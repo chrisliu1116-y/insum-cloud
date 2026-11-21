@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-21 17:53:56",
+  "generated": "2026-11-21 18:05:46",
   "mode": "SHADOW(不写生产)",
   "vol_threshold": 400000,
   "cf": {
@@ -200,9 +200,9 @@
           "Huang",
           "rejoins",
           "NVIDIA",
-          "nvidia",
+          "jensen",
           "huang",
-          "jensen"
+          "nvidia"
         ],
         "hits": [
           {
@@ -254,7 +254,7 @@
       "id": "31552",
       "title": "Presidential Election Winner 2028",
       "slug": "presidential-election-winner-2028",
-      "vol24h": 431368,
+      "vol24h": 431202,
       "endDate": "2028-11-08T04:59:00Z",
       "days_left": 717,
       "distant": true,

@@ -1034,34 +1034,46 @@ def write_sse(sse_path, breadth_path=None):
         },
         "dates": dates, "o": o, "h": h, "l": l, "c": c,
     }
-    # v491【多指数对比】额外 5 个指数写入 indices 字段，各存自己的真实起点。
-    # 失败隔离：单个指数抓取失败只 log 并跳过，绝不影响上证主字段/breadth 主流程。
-    # 起点不补零、不伪造——东财返回多少根就存多少根，前端按 dates[0] 切割指标。
-    extra = {}
-    for key, name, sec in EXTRA_INDICES:
-        try:
-            bars2 = fetch_index_bars(lmt=10000, beg="19900101", secid=sec)
-            if not bars2:
-                log(f"[multi-idx] {key} {name} 抓取为空，跳过（不影响上证）")
-                continue
-            d2 = [b["d"][:10] for b in bars2]
-            v2 = float(bars2[-1]["c"])
-            if not (50 < v2 < 20000):
-                log(f"[multi-idx] {key} {name} 末收 {v2} 不在指数量级，疑似抓错，跳过")
-                continue
-            extra[key] = {
-                "name": name, "secid": sec,
-                "from": d2[0], "to": d2[-1], "days": len(d2),
-                "dates": d2,
-                "o": [round(b["o"], 2) for b in bars2],
-                "h": [round(b["h"], 2) for b in bars2],
-                "l": [round(b["l"], 2) for b in bars2],
-                "c": [round(b["c"], 2) for b in bars2],
-            }
-            log(f"[multi-idx] {key} {name} {d2[0]} → {d2[-1]} ({len(d2)} 根)")
-        except Exception as e:
-            log(f"[multi-idx] {key} {name} 失败({type(e).__name__}:{str(e)[:80]})，跳过")
-    payload["indices"] = extra
+    # v526【去耦合·铁律】绝不为了多指数重抓 5 个指数：① 频繁跑批会招腾讯/东财风控；
+    # ② 用户 2026-11-21 明确「GHA已有完整文件就裁切，不要重跑」。
+    # 策略：旧 sse.json 里已有 indices → 原样保留（breadth 跑批只更新上证主字段）；
+    # 只有旧文件完全没有 indices（首次迁移）才抓一次，之后交给独立脚本
+    # tools/update_indices.py 小步增量补，不再随 breadth 主跑批触发。
+    try:
+        with open(sse_path, encoding="utf-8") as f:
+            _old = json.load(f)
+        old_idx = _old.get("indices") or {}
+    except Exception:
+        old_idx = {}
+    if old_idx:
+        payload["indices"] = old_idx                 # 现成数据直接用，零请求
+        log(f"[multi-idx] 复用已有 indices {len(old_idx)} 个（零请求，不重抓）")
+    else:
+        extra = {}
+        for key, name, sec in EXTRA_INDICES:
+            try:
+                bars2 = fetch_index_bars(lmt=10000, beg="19900101", secid=sec)
+                if not bars2:
+                    log(f"[multi-idx] {key} {name} 抓取为空，跳过")
+                    continue
+                d2 = [b["d"][:10] for b in bars2]
+                v2 = float(bars2[-1]["c"])
+                if not (50 < v2 < 20000):
+                    log(f"[multi-idx] {key} {name} 末收 {v2} 疑似抓错，跳过")
+                    continue
+                extra[key] = {
+                    "name": name, "secid": sec,
+                    "from": d2[0], "to": d2[-1], "days": len(d2),
+                    "dates": d2,
+                    "o": [round(b["o"], 2) for b in bars2],
+                    "h": [round(b["h"], 2) for b in bars2],
+                    "l": [round(b["l"], 2) for b in bars2],
+                    "c": [round(b["c"], 2) for b in bars2],
+                }
+                log(f"[multi-idx] 首次生成 {key} {name} {d2[0]} → {d2[-1]} ({len(d2)} 根)")
+            except Exception as e:
+                log(f"[multi-idx] {key} {name} 失败({type(e).__name__}:{str(e)[:80]})，跳过")
+        payload["indices"] = extra
     with open(sse_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     log(f"已写出 {sse_path}  上证 {dates[0]} → {last}  ({len(dates)} 根, 额外指数 {len(extra)}/{len(EXTRA_INDICES)})")

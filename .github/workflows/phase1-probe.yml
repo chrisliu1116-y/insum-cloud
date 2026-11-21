@@ -1,0 +1,36 @@
+name: phase1-probe
+# Phase 1 只读探测：Polymarket Gamma API + CF 新闻池 + 指数起点
+# 手动触发；跑完把 phase1_probe.json 作为 artifact 上传，不改任何生产数据。
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 只读探测
+        run: python3 tools/phase1_probe.py
+      - name: 上传报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-probe
+          path: tools/phase1_probe.json
+          retention-days: 30
+      - name: 摘要打印
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('tools/phase1_probe.json',encoding='utf-8'))
+          g=d['gamma']; c=d['cf_news']
+          print('GAMMA stable %s/3' % g['stable'])
+          print('GAMMA runs', g['runs'])
+          print('VOL stats', g.get('vol_stats'))
+          print('VOL buckets', g.get('threshold_buckets'))
+          print('CF', {k:c.get(k) for k in ('ok','n_items','newest_age_hours','sample_titles')})
+          print('INDEX starts', {k:(v.get('first'),v.get('bars')) for k,v in d['indices'].items()})
+          PY

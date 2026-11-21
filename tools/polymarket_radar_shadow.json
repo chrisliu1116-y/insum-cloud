@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-21 17:44:11",
+  "generated": "2026-11-21 17:53:56",
   "mode": "SHADOW(不写生产)",
   "vol_threshold": 400000,
   "cf": {
@@ -11,7 +11,7 @@
       "id": "770450",
       "title": "Fed Decision in December?",
       "slug": "fed-decision-in-december-20260729232808632",
-      "vol24h": 3517220,
+      "vol24h": 3502644,
       "endDate": "2026-12-10T04:59:00Z",
       "days_left": 18,
       "distant": false,
@@ -66,8 +66,8 @@
           }
         ]
       },
-      "existing": false,
-      "matched_card": null,
+      "existing": true,
+      "matched_card": "fed:fed",
       "llm": {
         "keep": true,
         "reason": "宏观央行决策"
@@ -77,7 +77,7 @@
       "id": "711714",
       "title": "Israel x Iran ceasefire continues through...?",
       "slug": "israel-x-iran-ceasefire-continues-throughptptpt-20260716224448963",
-      "vol24h": 1484194,
+      "vol24h": 1487879,
       "endDate": "2026-12-31T20:29:00Z",
       "days_left": 40,
       "distant": false,
@@ -89,19 +89,19 @@
         "entities": [
           "Israel",
           "Iran",
-          "israel",
-          "iran"
+          "iran",
+          "israel"
         ],
         "hits": []
       },
-      "existing": false,
-      "matched_card": null
+      "existing": true,
+      "matched_card": "iran:iran"
     },
     {
       "id": "30829",
       "title": "Democratic Presidential Nominee 2028",
       "slug": "democratic-presidential-nominee-2028",
-      "vol24h": 1131055,
+      "vol24h": 1129496,
       "endDate": "2028-11-08T04:59:00Z",
       "days_left": 717,
       "distant": true,
@@ -122,7 +122,7 @@
       "id": "31875",
       "title": "Republican Presidential Nominee 2028",
       "slug": "republican-presidential-nominee-2028",
-      "vol24h": 968884,
+      "vol24h": 971163,
       "endDate": "2028-11-08T04:59:00Z",
       "days_left": 717,
       "distant": true,
@@ -143,7 +143,7 @@
       "id": "79987",
       "title": "Next French Presidential Election",
       "slug": "next-french-presidential-election",
-      "vol24h": 941033,
+      "vol24h": 946376,
       "endDate": "2027-04-19T03:59:00Z",
       "days_left": 148,
       "distant": false,
@@ -186,7 +186,7 @@
       "id": "1374448",
       "title": "Jensen Huang rejoins NVIDIA by...?",
       "slug": "jensen-huang-rejoins-nvidia-byptptpt",
-      "vol24h": 450220,
+      "vol24h": 449917,
       "endDate": "2028-01-01T04:59:00Z",
       "days_left": 405,
       "distant": true,
@@ -200,9 +200,9 @@
           "Huang",
           "rejoins",
           "NVIDIA",
-          "jensen",
+          "nvidia",
           "huang",
-          "nvidia"
+          "jensen"
         ],
         "hits": [
           {
@@ -254,7 +254,7 @@
       "id": "31552",
       "title": "Presidential Election Winner 2028",
       "slug": "presidential-election-winner-2028",
-      "vol24h": 430448,
+      "vol24h": 431368,
       "endDate": "2028-11-08T04:59:00Z",
       "days_left": 717,
       "distant": true,
@@ -310,24 +310,14 @@
       "title": ""
     }
   ],
-  "genuine_new": [
-    {
-      "title": "Fed Decision in December?",
-      "vol24h": 3517220,
-      "category": "macro_central",
-      "days_left": 18,
-      "entities": [
-        "fed"
-      ]
-    }
-  ],
+  "genuine_new": [],
   "stats": {
     "poly_ge_threshold": 13,
     "after_whitelist": 8,
     "after_cf": 2,
     "distant_flagged": 4,
     "llm_keep": 2,
-    "existing_skipped": 1,
-    "genuine_new": 1
+    "existing_skipped": 3,
+    "genuine_new": 0
   }
 }

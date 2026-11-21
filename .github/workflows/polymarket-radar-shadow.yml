@@ -1,12 +1,10 @@
 name: polymarket-radar-shadow
-# Phase 3 正式：Polymarket 雷达 → 前端审批队列。
-# 链路：radar筛净新增 → 写auto_骨架卡(不调Gemini)进events_daily.json → 前端铃铛待审
-#      → 用户点「加入」POST回执到CF → 下次跑批读回执,只对已确认的调Gemini补全三段式。
-# 红线：未确认前零 Gemini 消耗。
+# 【手动排障用·不再自动跑】Polymarket 雷达独立报告。
+# 正式链路已迁到 macropulse-news/evolve-events.yml（由 cron-job.org 三班自动触发，
+# radar 筛选并入该 workflow）。本 workflow 仅保留手动 dispatch 供单独排查/看报告。
+# 关键：本账号 GHA schedule 不触发（实测全账号 schedule=0），故删除 schedule 避免误导。
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '30 07 * * *'   # 北京时间 15:30（收盘后）
 
 permissions:
   contents: write

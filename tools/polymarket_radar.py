@@ -206,9 +206,23 @@ def fetch_polymarket():
 
 
 def fetch_cf_items(hours=48):
-    """复用 build_news_map.py 现成链路：CF /__news，不碰 /api/news"""
-    d = get_json(EDGE_NEWS)
-    items = d.get('items', []) or []
+    """复用 CF /__news；MP_NEWS_POOL 环境变量可指向方案A合并池(CF+补抓)"""
+    local = os.environ.get('MP_NEWS_POOL', '').strip()
+    gen = ''
+    if local:
+        try:
+            with open(local, encoding='utf-8') as f:
+                dd = json.load(f)
+            items = dd.get('items', []) or []
+            gen = dd.get('generated', 'merged')
+            print('[radar] 用合并池 %s (%d条)' % (local, len(items)))
+        except Exception as e:
+            print('[radar] 合并池读取失败，回退CF: %s' % e)
+            dd = get_json(EDGE_NEWS); items = dd.get('items', []) or []; gen = dd.get('generated', '')
+    else:
+        dd = get_json(EDGE_NEWS)
+        items = dd.get('items', []) or []
+        gen = dd.get('generated', '')
     cutoff = time.time() * 1000 - hours * 3600 * 1000
     recent = []
     for it in items:
@@ -218,7 +232,7 @@ def fetch_cf_items(hours=48):
             except ValueError: continue
         if ts and ts >= cutoff:
             recent.append(it)
-    return recent, d.get('generated', '')
+    return recent, gen
 
 
 def cross_validate(ev_title, cf_items, cat):

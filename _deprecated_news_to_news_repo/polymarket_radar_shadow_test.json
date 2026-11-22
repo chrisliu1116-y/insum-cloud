@@ -1,0 +1,388 @@
+{
+  "generated": "2026-11-21 15:10:13",
+  "mode": "SHADOW(不写生产)",
+  "vol_threshold": 400000,
+  "cf": {
+    "n_48h": 2000,
+    "generated": "2026-11-20 12:07:32"
+  },
+  "candidates": [
+    {
+      "id": "770450",
+      "title": "Fed Decision in December?",
+      "slug": "fed-decision-in-december-20260729232808632",
+      "vol24h": 3646724,
+      "endDate": "2026-12-10T04:59:00Z",
+      "n_markets": 5,
+      "category": "macro_central",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中2条(需>=2)",
+        "entities": [
+          "December",
+          "fomc",
+          "rate decision",
+          "interest rate",
+          "inflation"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "美国费城联储主席Paulson：对FOMC考虑连续加息持开放态度",
+            "ts": 1795199568000
+          },
+          {
+            "level": "B",
+            "title": "提醒：美联储副主席Jefferson并未置评FOMC利率政策前景。",
+            "ts": 1795098342000
+          }
+        ]
+      }
+    },
+    {
+      "id": "711714",
+      "title": "Israel x Iran ceasefire continues through...?",
+      "slug": "israel-x-iran-ceasefire-continues-throughptptpt-20260716224448963",
+      "vol24h": 1460297,
+      "endDate": "2026-12-31T20:29:00Z",
+      "n_markets": 46,
+      "category": "geo_energy",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中5条(需>=2)",
+        "entities": [
+          "Israel",
+          "Iran",
+          "ceasefire",
+          "continues",
+          "through",
+          "conflict",
+          "invasion",
+          "strike"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "Iranian oil transferred between tankers as US expands blockade",
+            "ts": 1795145185000
+          },
+          {
+            "level": "B",
+            "title": "Monitoring data show Iranian oil is being transferred betwee",
+            "ts": 1795144886000
+          },
+          {
+            "level": "B",
+            "title": "Mandula port cargo throughput tops 15 mln tonnes, a record since opening",
+            "ts": 1795099359000
+          },
+          {
+            "level": "B",
+            "title": "美国网络安全公司股价上涨，Okta上涨6.2%，CrowdStrike上涨4.5%，Zscaler上涨5%，Cloudf",
+            "ts": 1795098878000
+          },
+          {
+            "level": "B",
+            "title": "Markets bet major central banks will keep raising rates, with high rates lasting",
+            "ts": 1795097500000
+          }
+        ]
+      }
+    },
+    {
+      "id": "30829",
+      "title": "Democratic Presidential Nominee 2028",
+      "slug": "democratic-presidential-nominee-2028",
+      "vol24h": 930390,
+      "endDate": "2028-11-08T04:59:00Z",
+      "n_markets": 128,
+      "category": "policy",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中12条(需>=2)",
+        "entities": [
+          "Democratic",
+          "Presidential",
+          "Nominee",
+          "election",
+          "president",
+          "policy",
+          "tariff"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "El Salvador President Nayib Bukele registered as a president",
+            "ts": 1795144564000
+          },
+          {
+            "level": "B",
+            "title": "Ukrainian president says he will push for four-way meeting with Europe, U.S. and",
+            "ts": 1795141583000
+          },
+          {
+            "level": "B",
+            "title": "China's president meets Australian PM Albanese",
+            "ts": 1795140801000
+          },
+          {
+            "level": "B",
+            "title": "President of the United States Donald J. Trump and The John F. Kennedy Center fo",
+            "ts": 1795134752000
+          },
+          {
+            "level": "B",
+            "title": "Sources: Brazilian President Lula is close to finalizing his",
+            "ts": 1795119697000
+          }
+        ]
+      }
+    },
+    {
+      "id": "79987",
+      "title": "Next French Presidential Election",
+      "slug": "next-french-presidential-election",
+      "vol24h": 917814,
+      "endDate": "2027-04-19T03:59:00Z",
+      "n_markets": 128,
+      "category": "policy",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中12条(需>=2)",
+        "entities": [
+          "French",
+          "Presidential",
+          "Election",
+          "election",
+          "president",
+          "policy",
+          "tariff"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "El Salvador President Nayib Bukele registered as a president",
+            "ts": 1795144564000
+          },
+          {
+            "level": "B",
+            "title": "Ukrainian president says he will push for four-way meeting with Europe, U.S. and",
+            "ts": 1795141583000
+          },
+          {
+            "level": "B",
+            "title": "China's president meets Australian PM Albanese",
+            "ts": 1795140801000
+          },
+          {
+            "level": "B",
+            "title": "President of the United States Donald J. Trump and The John F. Kennedy Center fo",
+            "ts": 1795134752000
+          },
+          {
+            "level": "B",
+            "title": "Sources: Brazilian President Lula is close to finalizing his",
+            "ts": 1795119697000
+          }
+        ]
+      }
+    },
+    {
+      "id": "31875",
+      "title": "Republican Presidential Nominee 2028",
+      "slug": "republican-presidential-nominee-2028",
+      "vol24h": 549213,
+      "endDate": "2028-11-08T04:59:00Z",
+      "n_markets": 128,
+      "category": "policy",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中12条(需>=2)",
+        "entities": [
+          "Republican",
+          "Presidential",
+          "Nominee",
+          "election",
+          "president",
+          "policy",
+          "tariff"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "El Salvador President Nayib Bukele registered as a president",
+            "ts": 1795144564000
+          },
+          {
+            "level": "B",
+            "title": "Ukrainian president says he will push for four-way meeting with Europe, U.S. and",
+            "ts": 1795141583000
+          },
+          {
+            "level": "B",
+            "title": "China's president meets Australian PM Albanese",
+            "ts": 1795140801000
+          },
+          {
+            "level": "B",
+            "title": "President of the United States Donald J. Trump and The John F. Kennedy Center fo",
+            "ts": 1795134752000
+          },
+          {
+            "level": "B",
+            "title": "Sources: Brazilian President Lula is close to finalizing his",
+            "ts": 1795119697000
+          }
+        ]
+      }
+    },
+    {
+      "id": "34044",
+      "title": "Will China invade Taiwan by end of 2026?",
+      "slug": "will-china-invade-taiwan-before-2027",
+      "vol24h": 499957,
+      "endDate": "2027-01-01T04:59:00Z",
+      "n_markets": 1,
+      "category": "geo_energy",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中26条(需>=2)",
+        "entities": [
+          "China",
+          "invade",
+          "Taiwan",
+          "ceasefire",
+          "conflict",
+          "invasion",
+          "strike"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "China hog farming margins: self-bred vs. purchased piglets",
+            "ts": 1795146014000
+          },
+          {
+            "level": "B",
+            "title": "Taiwan stocks plunge again, on track for worst week since 1991",
+            "ts": 1795145507000
+          },
+          {
+            "level": "B",
+            "title": "China government bond futures end morning session",
+            "ts": 1795145481000
+          },
+          {
+            "level": "B",
+            "title": "China meets Thai Prime Minister Anutin",
+            "ts": 1795145472000
+          },
+          {
+            "level": "B",
+            "title": "China stock index futures morning close",
+            "ts": 1795145470000
+          }
+        ]
+      }
+    },
+    {
+      "id": "158505",
+      "title": "Clarity Act (H.R.3633) signed into law in 2026?",
+      "slug": "clarity-act-signed-into-law-in-2026",
+      "vol24h": 498585,
+      "endDate": "2027-01-01T05:00:00Z",
+      "n_markets": 1,
+      "category": "policy",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中12条(需>=2)",
+        "entities": [
+          "Clarity",
+          "signed",
+          "election",
+          "president",
+          "policy",
+          "tariff"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "El Salvador President Nayib Bukele registered as a president",
+            "ts": 1795144564000
+          },
+          {
+            "level": "B",
+            "title": "Ukrainian president says he will push for four-way meeting with Europe, U.S. and",
+            "ts": 1795141583000
+          },
+          {
+            "level": "B",
+            "title": "China's president meets Australian PM Albanese",
+            "ts": 1795140801000
+          },
+          {
+            "level": "B",
+            "title": "President of the United States Donald J. Trump and The John F. Kennedy Center fo",
+            "ts": 1795134752000
+          },
+          {
+            "level": "B",
+            "title": "Sources: Brazilian President Lula is close to finalizing his",
+            "ts": 1795119697000
+          }
+        ]
+      }
+    },
+    {
+      "id": "1374448",
+      "title": "Jensen Huang rejoins NVIDIA by...?",
+      "slug": "jensen-huang-rejoins-nvidia-byptptpt",
+      "vol24h": 453682,
+      "endDate": "2028-01-01T04:59:00Z",
+      "n_markets": 4,
+      "category": "tech_major",
+      "cf": {
+        "pass": true,
+        "reason": "CF 48h命中4条(需>=2)",
+        "entities": [
+          "Jensen",
+          "Huang",
+          "rejoins",
+          "NVIDIA",
+          "resign",
+          "step down",
+          "appoint",
+          "merger"
+        ],
+        "hits": [
+          {
+            "level": "B",
+            "title": "NVIDIA 的市值被谷歌超越，使其成为",
+            "ts": 1795186428000
+          },
+          {
+            "level": "B",
+            "title": "NVIDIA 股价盘前跌幅扩大至 3%。",
+            "ts": 1795178065000
+          },
+          {
+            "level": "B",
+            "title": "Musk wants to send computing power into space; SpaceX creditors seek clause keep",
+            "ts": 1795147368000
+          },
+          {
+            "level": "B",
+            "title": "NVIDIA (NVDA.O): Vera Rubin NVL72 systems are now running in",
+            "ts": 1795119499000
+          }
+        ]
+      }
+    }
+  ],
+  "stats": {
+    "poly_ge_threshold": 13,
+    "after_whitelist": 8,
+    "after_cf": 8,
+    "llm_keep": 0
+  }
+}

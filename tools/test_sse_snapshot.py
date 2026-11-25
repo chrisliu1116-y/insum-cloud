@@ -154,12 +154,15 @@ if d:
 print('===== ⑨ sse_is_valid()：旧版 kline（今天/无 spot）必须判无效 =====')
 
 
-def sse_valid_check(meta, closes, today='2026-11-11'):
+def sse_valid_check(meta, closes, today='2026-11-11', indices=None):
     """写一份临时 sse.json，返回 R.sse_is_valid(...) 的结果。"""
     with tempfile.TemporaryDirectory() as tmp:
         p = os.path.join(tmp, 'sse.json')
+        obj = {"meta": meta, "c": closes}
+        if indices is not None:
+            obj["indices"] = indices
         with open(p, 'w', encoding='utf-8') as f:
-            json.dump({"meta": meta, "c": closes}, f)
+            json.dump(obj, f)
         return R.sse_is_valid(p, today)
 
 
@@ -182,6 +185,32 @@ ok(sse_valid_check(SNAP_META, [99.98, 11.71]) is False,
 with tempfile.TemporaryDirectory() as _tmp:
     ok(R.sse_is_valid(os.path.join(_tmp, 'missing.json'), '2026-11-11') is False,
        'sse.json 缺失/损坏 → False')
+
+print('===== ⑩ v581 多指数末日幂等：顶层今日但某指数落后必须判无效 =====')
+# 创业板 CYB 停在 11-23、其余已到 11-25 的线上实况
+SNAP_1125 = {"to": "2026-11-25", "to_src": "kline+snapshot",
+             "spot": {"spot_d": "2026-11-25", "spot_ts": "2026-11-25 15:02:24",
+                      "spot_close": 3476.47}}
+C1125 = [99.98, 3476.47]
+idx_all_fresh = {
+    "SZ": {"dates": ["2026-11-24", "2026-11-25"]},
+    "HS300": {"dates": ["2026-11-24", "2026-11-25"]},
+    "CYB": {"dates": ["2026-11-22", "2026-11-23"]},
+    "KC50": {"dates": ["2026-11-24", "2026-11-25"]},
+}
+idx_all_ok = {
+    "SZ": {"dates": ["2026-11-24", "2026-11-25"]},
+    "CYB": {"dates": ["2026-11-24", "2026-11-25"]},
+}
+ok(sse_valid_check(SNAP_1125, C1125, today='2026-11-25', indices=idx_all_fresh) is False,
+   '顶层今日+快照版但创业板末日 11-23<11-25 → False（触发补根）')
+ok(sse_valid_check(SNAP_1125, C1125, today='2026-11-25', indices=idx_all_ok) is True,
+   '顶层与所有 indices 均今日 → True（正常跳过幂等）')
+ok(sse_valid_check(SNAP_1125, C1125, today='2026-11-25', indices={}) is True,
+   'indices 为空（旧版 sse.json）→ True（兼容）')
+ok(sse_valid_check(SNAP_1125, C1125, today='2026-11-25',
+                   indices={"CYB": {"dates": []}}) is True,
+   'indices 品种 dates 为空 → 跳过检查 True（不误伤）')
 
 print('\n结果：%d 通过 / %d 失败' % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

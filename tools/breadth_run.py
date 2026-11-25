@@ -960,7 +960,29 @@ def sse_is_valid(path, today):
     if not (bool(c) and 50 < c[-1] < 20000):
         return False
     # 必须带收盘快照：旧版 kline（无 spot）即便是今天也要重写成 kline+snapshot
-    return bool(m.get("spot")) or m.get("to_src") == "kline+snapshot"
+    if not (bool(m.get("spot")) or m.get("to_src") == "kline+snapshot"):
+        return False
+    # v581【多指数末日幂等漏洞】顶层上证已今日 + 快照版，但 indices 里某个指数
+    # （实测创业板 CYB 停在 11-23，其他 4 个已到 11-25）落后时，旧逻辑判"今日完整"
+    # → 幂等闸跳过 → write_sse 里的 multi-idx 补根分支永远执行不到 → 落后会一直延续。
+    # 这里把每个指数的末日也纳入有效性判断：任一落后即判无效，由幂等闸触发
+    # write_sse() 用已有的 fetch_spot_bar_000001(secid) 快照补根逻辑补齐（不重抓历史）。
+    for key, obj in (o.get("indices") or {}).items():
+        if not isinstance(obj, dict):
+            continue
+        ds = obj.get("dates") or []
+        if not ds:
+            continue
+        last = ds[-1]
+        # 只要求「不早于 today」即可：周末/补跑跨日时指数末日可能等于上一交易日，
+        # 但那正是需要补根的情形——与上证同口径，必须 == today 才算完整。
+        if last < today:
+            try:
+                log("[sse-valid] %s 末日 %s < 交易日 %s，判为需补齐，触发 multi-idx 快照补根" % (key, last, today))
+            except Exception:
+                pass
+            return False
+    return True
 
 
 def write_sse(sse_path, breadth_path=None):

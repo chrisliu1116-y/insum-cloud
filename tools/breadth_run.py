@@ -802,23 +802,39 @@ def fetch_index_bars(lmt=10000, beg="19900101", secid=None):
     return []
 
 
-def fetch_index_bars_tencent(count=TENCENT_MAX_COUNT, timeout=TENCENT_TIMEOUT):
-    """腾讯 fqkline 备用源：返回最近若干根上证日K（升序），失败返回 []。
+def tx_code_for_secid(secid):
+    """东财 secid → 腾讯 fqkline 代码（v581b 多指数补根兜底用）。
+    只映射 EXTRA_INDICES 里已登记的指数；拿不准返回 None（绝不猜，防串标的）。
+    0.399xxx→sz，1.000xxx/1.000xxx→sh，与 universe.js txStockCode 口径一致。 """
+    s = str(secid or "")
+    if s == "1.000001":
+        return "sh000001"
+    if s.startswith("0.") and len(s.split(".", 1)[1]) == 6:
+        return "sz" + s.split(".", 1)[1]
+    if s.startswith("1.") and len(s.split(".", 1)[1]) == 6:
+        return "sh" + s.split(".", 1)[1]
+    return None
+
+
+def fetch_index_bars_tencent(count=TENCENT_MAX_COUNT, timeout=TENCENT_TIMEOUT, tx_code=None):
+    """腾讯 fqkline 备用源：返回最近若干根日K（升序），失败返回 []。
 
     字段映射：腾讯 day[i] = [日期, 开, 收, 高, 低, 成交量(手)]
       对应东财 f51..f57 = 日期, 开, 收, 高, 低, 成交量, 成交额。
     腾讯无成交额字段，a 记 0（write_sse 只输出 o/h/l/c，不输出 v/a，不影响产物）。
+    v581b：新增 tx_code 参数供多指数补根兜底；不传仍是上证 sh000001（原行为不变）。
     """
+    code = tx_code or "sh000001"
     count = max(1, min(int(count), TENCENT_MAX_COUNT))   # 封顶，规避 count 过大返回空
     try:
         r = B._session().get(   # v468: SESSION改为thread-local
             TENCENT_FQKLINE,
-            params={"param": "sh000001,day,,,%d,qfq" % count},
+            params={"param": code + ",day,,,%d,qfq" % count},
             timeout=timeout,
         )
         if r.status_code != 200:
             return []
-        node = ((r.json().get("data") or {}).get("sh000001") or {})
+        node = ((r.json().get("data") or {}).get(code) or {})
         arr = node.get("day") or node.get("qfqday") or []
         out = []
         for row in arr:
@@ -1078,10 +1094,29 @@ def write_sse(sse_path, breadth_path=None):
         try:
             sp2 = fetch_spot_bar_000001(secid=sec)   # 跟上证同一个快照函数，只是 secid 不同
             ok2, why2 = spot_usable(sp2, b_last)
-            if not ok2:
+            bar2 = None
+            if ok2:
+                bar2 = {k: sp2[k] for k in ("o", "c", "h", "l")}
+            else:
+                # v581b【腾讯日K兜底】东财 push2 快照在 GHA 出口常被风控拦（实测 6 个指数
+                # 全"抓取为空"），但腾讯 fqkline 各指数当日 K 线完整可用（实测 6/6 到
+                # 2026-11-25）。用户口径「随便测个腾讯就行，源没问题」。这里落现成的
+                # fetch_index_bars_tencent()（仅加 tx_code 参数，不新造抓取逻辑），
+                # 只取末根补当日：日期必须 == b_last 且收盘在指数点位量级，绝不合旧数据。
+                tx_code = tx_code_for_secid(sec)
+                if tx_code:
+                    try:
+                        txb = fetch_index_bars_tencent(count=5, tx_code=tx_code)
+                        if txb and txb[-1]["d"] == b_last:
+                            cand = {k: txb[-1][k] for k in ("o", "c", "h", "l")}
+                            if 50 < cand["c"] < 20000:
+                                bar2 = cand
+                                log(f"[multi-idx] {key} 东财快照不可用({why2})，落腾讯日K {tx_code} 末根补当日（收 {cand['c']}）")
+                    except Exception as eTx:
+                        log(f"[multi-idx] {key} 腾讯日K兜底失败({type(eTx).__name__}:{str(eTx)[:60]})")
+            if bar2 is None:
                 log(f"[multi-idx] {key} 快照不可用({why2})，保留旧数据")
                 continue
-            bar2 = {k: sp2[k] for k in ("o", "c", "h", "l")}
             if not (50 < bar2["c"] < 20000):
                 log(f"[multi-idx] {key} 快照收盘 {bar2['c']} 疑似抓错，跳过")
                 continue

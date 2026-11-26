@@ -28,3 +28,4 @@
 {"ts": "2026-11-25 15:55:21", "source": "tencent", "workers": 0, "conclusion": "idempotent", "reason": "今日数据已完整 2026-11-25", "elapsed_sec": 0, "avg_rps": 0, "ok": 0, "bad": 0, "n501": 0, "universe": 0, "trade_date": "2026-11-25", "new_days": 0}
 {"ts": "2026-11-25 16:56:51", "source": "tencent", "workers": 0, "conclusion": "idempotent", "reason": "今日数据已完整 2026-11-25", "elapsed_sec": 0, "avg_rps": 0, "ok": 0, "bad": 0, "n501": 0, "universe": 0, "trade_date": "2026-11-25", "new_days": 0}
 {"ts": "2026-11-25 17:00:59", "source": "tencent", "workers": 0, "conclusion": "idempotent", "reason": "今日数据已完整 2026-11-25", "elapsed_sec": 0, "avg_rps": 0, "ok": 0, "bad": 0, "n501": 0, "universe": 0, "trade_date": "2026-11-25", "new_days": 0}
+{"ts": "2026-11-26 15:02:18", "source": "tencent", "workers": 32, "conclusion": "success", "reason": "", "elapsed_sec": 42, "avg_rps": 136, "ok": 5766, "bad": 0, "n501": 0, "universe": 5766, "trade_date": "2026-11-26", "new_days": 1}
